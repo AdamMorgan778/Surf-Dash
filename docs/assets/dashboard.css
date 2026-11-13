@@ -43,3 +43,84 @@
 .bar-icon.sev-warning { color: var(--sev-warning); }
 .bar-icon.sev-info { color: var(--sev-info); }
 .sev-chip { white-space: nowrap; }
+
+/* ---- Rules dashboard and breakdown (rules.js) */
+.is-dim { opacity: 0.35; }
+.span-all { grid-column: 1 / -1; }
+.rules-search { min-width: 13rem; margin: 0; }
+
+.rules-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 1.6rem; margin: 0.3rem 0; }
+.rules-chip {
+  font: inherit; font-size: 0.65rem; padding: 0.15rem 0.55rem; border-radius: 999px; cursor: pointer;
+  color: var(--md-default-fg-color); background: var(--md-code-bg-color);
+  border: 1px solid var(--md-default-fg-color--lighter); max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rules-chip:hover, .rules-chip:focus-visible { border-color: var(--md-accent-fg-color); }
+.rules-chip-clear { background: transparent; }
+
+.rules-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.9rem; margin: 0.8rem 0 0; font-size: 0.68rem; }
+.legend-item { font: inherit; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; padding: 0.1rem 0.2rem;
+  background: none; border: 0; color: var(--md-default-fg-color); border-radius: 4px; }
+.legend-item:hover, .legend-item:focus-visible { background: var(--md-code-bg-color); }
+.legend-swatch { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+.legend-swatch.sev-error { background: var(--sev-error); }
+.legend-swatch.sev-warning { background: var(--sev-warning); }
+.legend-swatch.sev-info { background: var(--sev-info); }
+.legend-hint { color: var(--md-default-fg-color--light); }
+
+.tile-click, .sbar-row { cursor: pointer; border-radius: 6px; }
+.tile-click:hover, .tile-click:focus-visible { border-color: var(--md-accent-fg-color); }
+.sbar-row:hover, .sbar-row:focus-visible { background: var(--md-code-bg-color); }
+.sbar-row { padding-left: 0.2rem; padding-right: 0.2rem; grid-template-columns: 8.5rem 1fr auto; }
+.sbar-row.wide { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; }
+.sbar-row.wide .bar-label { white-space: normal; }
+.sbar { display: flex; gap: 2px; height: 100%; min-width: 4px; }
+.sbar-seg { flex-basis: 0; min-width: 2px; }
+.sbar-seg:last-child { border-radius: 0 4px 4px 0; }
+.sbar-seg.sev-error { background: var(--sev-error); }
+.sbar-seg.sev-warning { background: var(--sev-warning); }
+.sbar-seg.sev-info { background: var(--sev-info); }
+.rate-track { background: var(--md-default-fg-color--lightest); border-radius: 0 4px 4px 0; }
+
+.md-typeset .rules-grid table:not([class]) { font-size: 0.68rem; }
+.md-typeset .rules-grid table:not([class]) th, .md-typeset .rules-grid table:not([class]) td { padding: 0.25rem 0.4rem; text-align: center; vertical-align: middle; }
+.md-typeset .rules-grid table:not([class]) tbody th { text-align: left; }
+.grid-head { font: inherit; font-weight: 600; background: none; border: 0; cursor: pointer; color: var(--md-default-fg-color); padding: 0.15rem 0.3rem; border-radius: 4px; }
+.grid-head:hover, .grid-head:focus-visible, .grid-head.is-active { background: var(--md-code-bg-color); color: var(--md-accent-fg-color); }
+.grid-cell { font: inherit; font-variant-numeric: tabular-nums; width: 100%; min-width: 2.4rem; padding: 0.3rem 0; cursor: pointer;
+  border: 2px solid transparent; border-radius: 4px; color: var(--md-default-fg-color); }
+.grid-cell:hover, .grid-cell:focus-visible, .grid-cell.is-active { border-color: var(--md-default-fg-color); }
+.grid-zero { color: var(--md-default-fg-color--lighter); }
+.grid-total { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.md-typeset .rules-table table:not([class]) { font-size: 0.68rem; }
+.md-typeset .rules-table table:not([class]) th.num, .md-typeset .rules-table table:not([class]) td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.sort-btn { font: inherit; font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; white-space: nowrap; }
+.sort-btn:hover, .sort-btn:focus-visible { color: var(--md-accent-fg-color); }
+.sort-mark { font-size: 0.55rem; opacity: 0.6; }
+th[aria-sort="ascending"] .sort-mark, th[aria-sort="descending"] .sort-mark { opacity: 1; }
+.expand-btn { font: inherit; background: none; border: 0; cursor: pointer; color: var(--md-default-fg-color); padding: 0 0.2rem; }
+.detail-row td { background: var(--md-code-bg-color); }
+.fail-list-title { font-weight: 600; margin-bottom: 0.2rem; }
+.md-typeset ul.fail-list { margin: 0; columns: 3 11rem; list-style: none; }
+.md-typeset ul.fail-list li { margin: 0 0 0.15rem; break-inside: avoid; }
+
+.rules-pager { display: flex; align-items: center; gap: 0.8rem; font-size: 0.68rem; margin: 0.4rem 0 1rem; }
+.rules-pager button { font: inherit; padding: 0.2rem 0.6rem; border-radius: 6px; cursor: pointer;
+  color: var(--md-default-fg-color); background: var(--md-default-bg-color); border: 1px solid var(--md-default-fg-color--lighter); }
+.rules-pager button:disabled { opacity: 0.4; cursor: default; }
+.md-typeset .rules-csv { font-size: 0.65rem; padding: 0.2rem 0.7rem; margin-left: 0.4rem; }
+.md-typeset .rules-csv:disabled { opacity: 0.4; cursor: default; }
+.rules-summary { font-size: 0.72rem; }
+
+/* Fit the rules tables to the page: Material's defaults (wide padding, 5rem minimum column width) push them off the edge. */
+.md-typeset .rules-table table:not([class]), .md-typeset .rules-grid table:not([class]) { display: table; width: 100%; }
+.md-typeset .rules-table table:not([class]) th, .md-typeset .rules-table table:not([class]) td { padding: 0.45em 0.6em; min-width: 0; }
+.md-typeset .rules-grid table:not([class]) th, .md-typeset .rules-grid table:not([class]) td { min-width: 0; }
+.md-typeset .rules-table table:not([class]) td:first-child:has(.expand-btn), .md-typeset .rules-table table:not([class]) th:first-child:empty { width: 1.4rem; padding-right: 0; }
+.grid-head { white-space: normal; }
+.grid-cell { min-width: 1.8rem; }
+.md-typeset .rules-grid table:not([class]) { font-size: 0.6rem; }
+.md-typeset .rules-grid table:not([class]) th, .md-typeset .rules-grid table:not([class]) td { padding: 0.2rem 0.15rem; }
+.grid-head { padding: 0.1rem 0.15rem; }

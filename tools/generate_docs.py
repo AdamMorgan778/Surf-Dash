@@ -154,7 +154,8 @@ def rules_page(results):
         c = counts.setdefault(r["rule"], {"pass": 0, "fail": 0})
         c[r["status"]] += 1
     rules = results["rules"]
-    L = ["# Rules", "",
+    L = ["# Rule reference", "",
+         "What each rule checks. For charts and filters, see the [rules dashboard](index.md).", "",
          f"The {len(rules)} rules the model is checked against on every build. "
          f"{sum(1 for r in rules if r.get('bpaId'))} of them match a rule in Microsoft's "
          f"[Best Practice Analyzer rule set]({BPA_SOURCE}) (BPA) and carry its ID. The rest are this project's own "
@@ -195,11 +196,14 @@ def main():
     write(os.path.join(DOCS, "catalogue.md"), catalogue(model))
     write(os.path.join(DOCS, "bus-matrix.md"), bus_matrix(model))
     write(os.path.join(DOCS, "glossary.md"), glossary())
-    write(os.path.join(DOCS, "rules.md"), rules_page(results))
+    old = os.path.join(DOCS, "rules.md")  # the rule list moved to rules/reference.md
+    if os.path.exists(old):
+        os.remove(old)
+    write(os.path.join(DOCS, "rules", "reference.md"), rules_page(results))
     os.makedirs(os.path.join(DOCS, "data"), exist_ok=True)
     for name in ("model.json", "results.json", "issues.json"):
         shutil.copyfile(os.path.join(BUILD, name), os.path.join(DOCS, "data", name))
-    print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rules")
+    print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rule reference")
 
 
 if __name__ == "__main__":

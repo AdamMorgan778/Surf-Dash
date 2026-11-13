@@ -22,7 +22,7 @@ State of the Surf Analytics semantic model: how well it is documented, which rul
     <section><h3>Open issues by table</h3><div id="chart-issues"></div></section>
   </div>
   <h2 id="rules-heading">Rule results</h2>
-  <p class="dash-note">What each rule checks, and which come from the Best Practice Analyzer, is on the <a href="rules/">Rules</a> page.</p>
+  <p class="dash-note">What each rule checks, and which come from the Best Practice Analyzer, is in the <a href="rules/reference/">rule reference</a>. For charts, filters and a full breakdown, open the <a href="rules/">rules dashboard</a>.</p>
   <div id="rules-table"></div>
   <h2>Issues</h2>
   <div id="issues-table"></div>
