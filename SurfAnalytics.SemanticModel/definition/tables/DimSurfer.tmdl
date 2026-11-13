@@ -1,0 +1,85 @@
+table DimSurfer
+	lineageTag: 0db06936-8846-4ac3-99e8-3cee91b8a9ba
+
+	column SurferKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 6e1bf24f-37c3-4985-a353-ea2c919ac61c
+		summarizeBy: none
+		sourceColumn: SurferKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column SurferName
+		dataType: string
+		lineageTag: 7355899e-f11e-4e64-a623-1fcbe2045ace
+		summarizeBy: none
+		sourceColumn: SurferName
+
+		annotation SummarizationSetBy = Automatic
+
+	column SkillLevel
+		dataType: string
+		lineageTag: 8c5b9dc0-f559-44de-a25e-c6635426334b
+		summarizeBy: none
+		sourceColumn: SkillLevel
+
+		annotation SummarizationSetBy = Automatic
+
+	column AgeBand
+		dataType: string
+		lineageTag: 9896d400-0cb4-4019-88fa-ec8296af1b1f
+		summarizeBy: none
+		sourceColumn: AgeBand
+
+		annotation SummarizationSetBy = Automatic
+
+	column Stance
+		dataType: string
+		lineageTag: 0c70612f-6c62-42dc-94b2-93bd59ac2583
+		summarizeBy: none
+		sourceColumn: Stance
+
+		annotation SummarizationSetBy = Automatic
+
+	column HomeCountry
+		dataType: string
+		lineageTag: 8a7b543d-6384-4c69-826e-29b14596dc8a
+		dataCategory: Country
+		summarizeBy: none
+		sourceColumn: HomeCountry
+
+		annotation SummarizationSetBy = Automatic
+
+	column Membership
+		dataType: string
+		lineageTag: 3dcc8c6e-f0a5-41d4-84ee-91bca40911b1
+		summarizeBy: none
+		sourceColumn: Membership
+
+		annotation SummarizationSetBy = Automatic
+
+	column MemberSince
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: ab850e5e-2f46-45dd-aaa6-8d7812ca7bbb
+		summarizeBy: none
+		sourceColumn: MemberSince
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition DimSurfer = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimSurfer.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"SurferKey", Int64.Type}, {"SurferName", type text}, {"SkillLevel", type text}, {"AgeBand", type text}, {"Stance", type text}, {"HomeCountry", type text}, {"Membership", type text}, {"MemberSince", type date}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

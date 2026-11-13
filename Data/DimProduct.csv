@@ -1,0 +1,17 @@
+ProductKey,Product,Category,ListPrice
+1,Group Lesson (2h),Lessons,65.0
+2,Private Lesson (1.5h),Lessons,120.0
+3,5-Day Surf Camp,Lessons,420.0
+4,Video Coaching Session,Lessons,90.0
+5,Soft-top Rental (Day),Rentals,25.0
+6,Hardboard Rental (Day),Rentals,35.0
+7,Wetsuit Rental (Day),Rentals,15.0
+8,Rental Week Package,Rentals,160.0
+9,Surf Wax,Retail,4.5
+10,Leash,Retail,32.0
+11,Rash Vest,Retail,45.0
+12,Board Shorts,Retail,58.0
+13,4/3 Wetsuit,Retail,289.0
+14,Reef-Safe Sunscreen,Retail,16.0
+15,Traction Pad,Retail,48.0
+16,Surfboard (New),Retail,640.0

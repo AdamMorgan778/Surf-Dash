@@ -1,0 +1,187 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.4.0/schema.json",
+  "name": "sessions_v14",
+  "position": {
+    "x": 648,
+    "y": 464,
+    "z": 14000,
+    "width": 608,
+    "height": 240,
+    "tabOrder": 14000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "DimSpot"
+                    }
+                  },
+                  "Property": "Spot"
+                }
+              },
+              "queryRef": "DimSpot.Spot",
+              "nativeQueryRef": "Spot"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "DimSpot"
+                    }
+                  },
+                  "Property": "BreakType"
+                }
+              },
+              "queryRef": "DimSpot.BreakType",
+              "nativeQueryRef": "BreakType"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Total Sessions"
+                }
+              },
+              "queryRef": "FactSession.Total Sessions",
+              "nativeQueryRef": "Total Sessions"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Avg Wave Height (ft)"
+                }
+              },
+              "queryRef": "FactSession.Avg Wave Height (ft)",
+              "nativeQueryRef": "Avg Wave Height (ft)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Longest Ride (s)"
+                }
+              },
+              "queryRef": "FactSession.Longest Ride (s)",
+              "nativeQueryRef": "Longest Ride (s)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Avg Water Temp (C)"
+                }
+              },
+              "queryRef": "FactSession.Avg Water Temp (C)",
+              "nativeQueryRef": "Avg Water Temp (C)"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Avg Session Rating"
+                }
+              },
+              "queryRef": "FactSession.Avg Session Rating",
+              "nativeQueryRef": "Avg Session Rating"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "FactSession"
+                  }
+                },
+                "Property": "Avg Session Rating"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Spot Scorecard'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0B3954'"
+                    }
+                  }
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "12D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

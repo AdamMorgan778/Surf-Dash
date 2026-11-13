@@ -1,0 +1,58 @@
+table DimBoard
+	lineageTag: 060eb08a-3eaf-4b44-bb7e-f519e6aaf8d7
+
+	column BoardKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: d99002f1-5545-4692-91d9-2cb2f02acff0
+		summarizeBy: none
+		sourceColumn: BoardKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column BoardModel
+		dataType: string
+		lineageTag: 3fa23c22-85cb-4209-8539-c4c0c0f2ed63
+		summarizeBy: none
+		sourceColumn: BoardModel
+
+		annotation SummarizationSetBy = Automatic
+
+	column BoardType
+		dataType: string
+		lineageTag: 28fcebcf-dadd-4ab3-b655-7fa64f0464ae
+		summarizeBy: none
+		sourceColumn: BoardType
+
+		annotation SummarizationSetBy = Automatic
+
+	column LengthFt
+		dataType: double
+		formatString: 0.0
+		lineageTag: 3ef3c81a-c89b-47f7-8fd6-d05afbb65148
+		summarizeBy: none
+		sourceColumn: LengthFt
+
+		annotation SummarizationSetBy = Automatic
+
+	column Brand
+		dataType: string
+		lineageTag: 02184688-a8d9-4cda-98b8-a88aaf72e1df
+		summarizeBy: none
+		sourceColumn: Brand
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimBoard = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimBoard.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"BoardKey", Int64.Type}, {"BoardModel", type text}, {"BoardType", type text}, {"LengthFt", type number}, {"Brand", type text}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

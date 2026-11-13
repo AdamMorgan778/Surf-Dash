@@ -1,0 +1,141 @@
+table FactSales
+	lineageTag: 4a65214e-3c0e-4ba4-85ca-7d7a154a5612
+
+	measure 'Total Revenue' = SUM(FactSales[Revenue])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Sales
+		lineageTag: cbce5325-14c6-4588-b614-e727822c03f5
+
+	measure 'Units Sold' = SUM(FactSales[Quantity])
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: eba33ed3-b59d-44f1-a0aa-8d33cc58d16d
+
+	measure Transactions = COUNTROWS(FactSales)
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: 0ecc9061-2155-413f-a68a-617f4d1621e3
+
+	measure 'Avg Order Value' = DIVIDE([Total Revenue], [Transactions])
+		formatString: \$#,0.00
+		displayFolder: Sales
+		lineageTag: 7fafb33e-c496-47f6-a274-f3fd06b0176c
+
+	measure 'Total Discounts' = SUM(FactSales[DiscountAmount])
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Sales
+		lineageTag: e3423424-5a46-4e21-9b24-75c85b5e63f8
+
+	measure 'Revenue LY' = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(DimDate[Date]))
+		formatString: \$#,0;(\$#,0);\$#,0
+		displayFolder: Time Intelligence
+		lineageTag: 7645c0a8-966b-4850-ba61-11a49391c03c
+
+	measure 'Revenue YoY %' = IF(NOT ISBLANK([Revenue LY]), DIVIDE([Total Revenue] - [Revenue LY], [Revenue LY]))
+		formatString: 0.0%;-0.0%;0.0%
+		displayFolder: Time Intelligence
+		lineageTag: 53c1516d-723b-4c9c-963a-b1653866b954
+
+	measure 'Paying Customers' = DISTINCTCOUNT(FactSales[SurferKey])
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: b980908c-0e1d-4d12-8e6c-a9f0f801ea46
+
+	column SalesID
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 3b18e757-350f-477f-bf1a-109d079fc92a
+		summarizeBy: none
+		sourceColumn: SalesID
+
+		annotation SummarizationSetBy = Automatic
+
+	column DateKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 2de36dc3-8387-401c-8031-b1b14aa4f2b3
+		summarizeBy: none
+		sourceColumn: DateKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column SpotKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: db54663a-2ec1-4fc5-a9c5-7aab7c2198cd
+		summarizeBy: none
+		sourceColumn: SpotKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column SurferKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 3cb68dd8-374f-4c69-a5de-100177a967fd
+		summarizeBy: none
+		sourceColumn: SurferKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column ProductKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: f3b6f1e3-6f6b-40ab-89f2-5446c6c09a77
+		summarizeBy: none
+		sourceColumn: ProductKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quantity
+		dataType: int64
+		formatString: #,0
+		lineageTag: 8e3d8895-6b23-48f1-b518-3b4851024e36
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+		annotation SummarizationSetBy = Automatic
+
+	column UnitPrice
+		dataType: decimal
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		lineageTag: f865d1d1-a6e9-4ff2-9764-9c959d8a3453
+		summarizeBy: sum
+		sourceColumn: UnitPrice
+
+		annotation SummarizationSetBy = Automatic
+
+	column Revenue
+		dataType: decimal
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		lineageTag: d4a7cdcc-ae74-4e89-aa6f-746f83df7df8
+		summarizeBy: sum
+		sourceColumn: Revenue
+
+		annotation SummarizationSetBy = Automatic
+
+	column DiscountAmount
+		dataType: decimal
+		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
+		lineageTag: 508a14de-66d0-4fd9-964b-853240a994e2
+		summarizeBy: sum
+		sourceColumn: DiscountAmount
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactSales = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "FactSales.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"SalesID", Int64.Type}, {"DateKey", Int64.Type}, {"SpotKey", Int64.Type}, {"SurferKey", Int64.Type}, {"ProductKey", Int64.Type}, {"Quantity", Int64.Type}, {"UnitPrice", Currency.Type}, {"Revenue", Currency.Type}, {"DiscountAmount", Currency.Type}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+

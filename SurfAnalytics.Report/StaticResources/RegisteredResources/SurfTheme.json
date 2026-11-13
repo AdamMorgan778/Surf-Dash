@@ -1,0 +1,64 @@
+{
+  "name": "SurfTheme",
+  "dataColors": [
+    "#087E8B",
+    "#FF6B6B",
+    "#F2C57C",
+    "#3FB8AF",
+    "#0B3954",
+    "#9BC53D",
+    "#5E60CE",
+    "#E76F51",
+    "#2A9D8F",
+    "#B5838D"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#0B3954",
+  "tableAccent": "#3FB8AF",
+  "good": "#2A9D8F",
+  "neutral": "#F2C57C",
+  "bad": "#FF6B6B",
+  "textClasses": {
+    "title": {
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0B3954"
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "color": "#0B3954"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "border": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#D5E8EC"
+              }
+            },
+            "radius": 10
+          }
+        ],
+        "dropShadow": [
+          {
+            "show": false
+          }
+        ]
+      }
+    }
+  }
+}

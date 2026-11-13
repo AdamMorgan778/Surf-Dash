@@ -1,0 +1,20 @@
+SpotKey,Spot,Country,Region,BreakType,Difficulty,Hemisphere
+1,Pipeline,USA,North America,Reef,Expert,N
+2,Waikiki,USA,North America,Reef,Beginner,N
+3,Malibu First Point,USA,North America,Point,Intermediate,N
+4,Huntington Beach,USA,North America,Beach,Intermediate,N
+5,Puerto Escondido,Mexico,Latin America,Beach,Expert,N
+6,Santa Teresa,Costa Rica,Latin America,Beach,Beginner,N
+7,Ericeira,Portugal,Europe,Reef,Advanced,N
+8,Nazare,Portugal,Europe,Beach,Expert,N
+9,Hossegor,France,Europe,Beach,Advanced,N
+10,Biarritz,France,Europe,Beach,Beginner,N
+11,Fistral Beach,United Kingdom,Europe,Beach,Intermediate,N
+12,Anchor Point,Morocco,Africa,Point,Advanced,N
+13,Jeffreys Bay,South Africa,Africa,Point,Advanced,S
+14,Muizenberg,South Africa,Africa,Beach,Beginner,S
+15,Uluwatu,Indonesia,Asia Pacific,Reef,Advanced,S
+16,Canggu,Indonesia,Asia Pacific,Beach,Beginner,S
+17,Bells Beach,Australia,Asia Pacific,Reef,Advanced,S
+18,Snapper Rocks,Australia,Asia Pacific,Point,Intermediate,S
+19,Byron Bay,Australia,Asia Pacific,Point,Beginner,S

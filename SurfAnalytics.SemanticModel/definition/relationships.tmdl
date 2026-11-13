@@ -1,0 +1,32 @@
+relationship 6d14b76a-c6ab-47f8-93b0-19b5a850f16b
+	fromColumn: FactSession.DateKey
+	toColumn: DimDate.DateKey
+
+relationship 3b4b6ee1-8962-4940-b9c6-13b459295507
+	fromColumn: FactSession.SpotKey
+	toColumn: DimSpot.SpotKey
+
+relationship 94239371-8588-4fe0-b1b2-6ad636273aba
+	fromColumn: FactSession.SurferKey
+	toColumn: DimSurfer.SurferKey
+
+relationship b5198bf6-56d5-42b8-9ac4-0a084bc6b7d6
+	fromColumn: FactSession.BoardKey
+	toColumn: DimBoard.BoardKey
+
+relationship ed95c2bf-34d1-4d21-9296-8a84bf762907
+	fromColumn: FactSales.DateKey
+	toColumn: DimDate.DateKey
+
+relationship 76ab85d5-3f4f-448e-ae39-02a9c09a9b5f
+	fromColumn: FactSales.SpotKey
+	toColumn: DimSpot.SpotKey
+
+relationship c927099b-1edd-48cb-8f94-cc70b0e553cd
+	fromColumn: FactSales.SurferKey
+	toColumn: DimSurfer.SurferKey
+
+relationship 427834d9-7e56-440f-8df7-db4d69d4bf3c
+	fromColumn: FactSales.ProductKey
+	toColumn: DimProduct.ProductKey
+

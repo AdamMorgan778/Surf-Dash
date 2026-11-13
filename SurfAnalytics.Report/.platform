@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "SurfAnalytics"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "765e65d1-c0aa-4785-8307-6f6a7b612221"
+  }
+}

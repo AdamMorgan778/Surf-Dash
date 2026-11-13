@@ -1,0 +1,74 @@
+table DimSpot
+	lineageTag: 65f4821a-bc5b-4a0f-b3b6-13625af507f4
+
+	column SpotKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: b2dccd26-4093-4f0d-9c24-c1a28027f10e
+		summarizeBy: none
+		sourceColumn: SpotKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column Spot
+		dataType: string
+		lineageTag: 827a1351-4b95-4e0a-939c-65bbbef4a059
+		summarizeBy: none
+		sourceColumn: Spot
+
+		annotation SummarizationSetBy = Automatic
+
+	column Country
+		dataType: string
+		lineageTag: 4fb1ced9-72b8-4227-8784-f95c0556fbdc
+		dataCategory: Country
+		summarizeBy: none
+		sourceColumn: Country
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: e3d8daac-c960-4777-a1e4-ecd4fb40a394
+		summarizeBy: none
+		sourceColumn: Region
+
+		annotation SummarizationSetBy = Automatic
+
+	column BreakType
+		dataType: string
+		lineageTag: 89a26e95-b0c2-4c2a-86b6-e389bd1bfc14
+		summarizeBy: none
+		sourceColumn: BreakType
+
+		annotation SummarizationSetBy = Automatic
+
+	column Difficulty
+		dataType: string
+		lineageTag: 6c21a11d-98f6-4356-b825-1164ab47584c
+		summarizeBy: none
+		sourceColumn: Difficulty
+
+		annotation SummarizationSetBy = Automatic
+
+	column Hemisphere
+		dataType: string
+		lineageTag: 2082e4c2-ec6b-42e1-a039-bac220c02098
+		summarizeBy: none
+		sourceColumn: Hemisphere
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimSpot = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimSpot.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+				    Typed = Table.TransformColumnTypes(Promoted, {{"SpotKey", Int64.Type}, {"Spot", type text}, {"Country", type text}, {"Region", type text}, {"BreakType", type text}, {"Difficulty", type text}, {"Hemisphere", type text}}, "en-US")
+				in
+				    Typed
+
+	annotation PBI_ResultType = Table
+
