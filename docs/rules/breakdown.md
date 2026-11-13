@@ -1,5 +1,17 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 # Breakdown
 
-The tables behind the [rules dashboard](index.md): results by rule, by table, and every individual check. Click a column heading to sort.
+The breakdown is now the **Tables** page of the [rules report](index.md). Taking you there…
 
-<div id="rules-app" data-page="breakdown" data-root="../../">Loading the rule results…</div>
+<script>
+  (function () {
+    var p = new URLSearchParams(location.search);
+    p.set("view", "tables");
+    location.replace("../?" + p.toString());
+  })();
+</script>

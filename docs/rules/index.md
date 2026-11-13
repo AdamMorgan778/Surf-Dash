@@ -1,5 +1,11 @@
-# Rules dashboard
+---
+hide:
+  - navigation
+  - toc
+---
 
-How the model measures up against its rules. Filter with the boxes, or click any bar, tile or cell. For the tables behind the charts, open the [breakdown](breakdown.md); for what each rule checks, see the [rule reference](reference.md).
+# Rules report
 
-<div id="rules-app" data-page="dashboard" data-root="../">Loading the rule results…</div>
+How the model measures up against its rules. Filters apply to every page; see the [rule reference](reference.md) for what each rule checks.
+
+<div id="rules-app" data-root="../">Loading the rule results…</div>

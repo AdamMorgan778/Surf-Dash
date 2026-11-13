@@ -26,10 +26,14 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+not_in_nav: |
+  /rules/breakdown.md
+
 # No nav section: MkDocs builds it from the files, so new table pages appear without editing this file.
 
 extra_css:
   - assets/dashboard.css
+  - assets/report.css
 extra_javascript:
   - assets/dashboard.js
   - assets/rules.js
