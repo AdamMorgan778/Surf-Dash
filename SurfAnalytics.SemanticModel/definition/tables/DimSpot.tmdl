@@ -1,6 +1,8 @@
+/// Surf spots where sessions are logged and where the surf school trades. One row per spot.
 table DimSpot
 	lineageTag: 65f4821a-bc5b-4a0f-b3b6-13625af507f4
 
+	/// Surrogate key for the spot.
 	column SpotKey
 		dataType: int64
 		isHidden
@@ -11,6 +13,7 @@ table DimSpot
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Name of the surf spot.
 	column Spot
 		dataType: string
 		lineageTag: 827a1351-4b95-4e0a-939c-65bbbef4a059
@@ -19,6 +22,7 @@ table DimSpot
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Country the spot is in.
 	column Country
 		dataType: string
 		lineageTag: 4fb1ced9-72b8-4227-8784-f95c0556fbdc
@@ -28,6 +32,7 @@ table DimSpot
 
 		annotation SummarizationSetBy = Automatic
 
+	/// World region used for reporting.
 	column Region
 		dataType: string
 		lineageTag: e3d8daac-c960-4777-a1e4-ecd4fb40a394
@@ -36,6 +41,7 @@ table DimSpot
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Type of wave break: Beach, Reef or Point.
 	column BreakType
 		dataType: string
 		lineageTag: 89a26e95-b0c2-4c2a-86b6-e389bd1bfc14
@@ -44,6 +50,7 @@ table DimSpot
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Skill level the spot suits: Beginner, Intermediate, Advanced or Expert.
 	column Difficulty
 		dataType: string
 		lineageTag: 6c21a11d-98f6-4356-b825-1164ab47584c
@@ -52,6 +59,7 @@ table DimSpot
 
 		annotation SummarizationSetBy = Automatic
 
+	/// N or S. Drives the swell and tourism seasons of the spot.
 	column Hemisphere
 		dataType: string
 		lineageTag: 2082e4c2-ec6b-42e1-a039-bac220c02098

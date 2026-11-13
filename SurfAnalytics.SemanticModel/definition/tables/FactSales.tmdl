@@ -1,21 +1,26 @@
+/// Sales lines for lessons, rentals and retail. One row per product per transaction.
 table FactSales
 	lineageTag: 4a65214e-3c0e-4ba4-85ca-7d7a154a5612
 
+	/// Sum of revenue after discounts, in US dollars.
 	measure 'Total Revenue' = SUM(FactSales[Revenue])
 		formatString: \$#,0;(\$#,0);\$#,0
 		displayFolder: Sales
 		lineageTag: cbce5325-14c6-4588-b614-e727822c03f5
 
+	/// Total quantity sold.
 	measure 'Units Sold' = SUM(FactSales[Quantity])
 		formatString: #,0
 		displayFolder: Sales
 		lineageTag: eba33ed3-b59d-44f1-a0aa-8d33cc58d16d
 
+	/// Number of sales lines.
 	measure Transactions = COUNTROWS(FactSales)
 		formatString: #,0
 		displayFolder: Sales
 		lineageTag: 0ecc9061-2155-413f-a68a-617f4d1621e3
 
+	/// Total revenue divided by the number of sales lines.
 	measure 'Avg Order Value' = DIVIDE([Total Revenue], [Transactions])
 		formatString: \$#,0.00
 		displayFolder: Sales
@@ -26,21 +31,25 @@ table FactSales
 		displayFolder: Sales
 		lineageTag: e3423424-5a46-4e21-9b24-75c85b5e63f8
 
+	/// Total revenue for the same period one year earlier.
 	measure 'Revenue LY' = CALCULATE([Total Revenue], SAMEPERIODLASTYEAR(DimDate[Date]))
 		formatString: \$#,0;(\$#,0);\$#,0
 		displayFolder: Time Intelligence
 		lineageTag: 7645c0a8-966b-4850-ba61-11a49391c03c
 
+	/// Growth of total revenue against the same period last year. Blank when there is no prior-year revenue.
 	measure 'Revenue YoY %' = IF(NOT ISBLANK([Revenue LY]), DIVIDE([Total Revenue] - [Revenue LY], [Revenue LY]))
 		formatString: 0.0%;-0.0%;0.0%
 		displayFolder: Time Intelligence
 		lineageTag: 53c1516d-723b-4c9c-963a-b1653866b954
 
+	/// Number of distinct surfers with at least one purchase.
 	measure 'Paying Customers' = DISTINCTCOUNT(FactSales[SurferKey])
 		formatString: #,0
 		displayFolder: Sales
 		lineageTag: b980908c-0e1d-4d12-8e6c-a9f0f801ea46
 
+	/// Unique identifier of the sales line.
 	column SalesID
 		dataType: int64
 		isHidden
@@ -51,6 +60,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Date of the sale. Joins to DimDate.
 	column DateKey
 		dataType: int64
 		isHidden
@@ -61,6 +71,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Location where the sale was made. Joins to DimSpot.
 	column SpotKey
 		dataType: int64
 		isHidden
@@ -71,6 +82,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Customer. Joins to DimSurfer.
 	column SurferKey
 		dataType: int64
 		isHidden
@@ -81,6 +93,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Product sold. Joins to DimProduct.
 	column ProductKey
 		dataType: int64
 		isHidden
@@ -91,6 +104,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Units sold on the line.
 	column Quantity
 		dataType: int64
 		formatString: #,0
@@ -100,6 +114,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Price per unit after discount, in US dollars.
 	column UnitPrice
 		dataType: decimal
 		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
@@ -109,6 +124,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Quantity multiplied by unit price, in US dollars.
 	column Revenue
 		dataType: decimal
 		formatString: \$#,0.00;(\$#,0.00);\$#,0.00
@@ -118,6 +134,7 @@ table FactSales
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Discount given on the line, in US dollars.
 	column DiscountAmount
 		dataType: decimal
 		formatString: \$#,0.00;(\$#,0.00);\$#,0.00

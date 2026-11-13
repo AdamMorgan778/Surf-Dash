@@ -1,51 +1,62 @@
+/// Surf sessions. One row per surfer per session, with the conditions and how the session went.
 table FactSession
 	lineageTag: 496fb908-1474-4635-a63f-5d0f24e57a7e
 
+	/// Number of surf sessions logged.
 	measure 'Total Sessions' = COUNTROWS(FactSession)
 		formatString: #,0
 		displayFolder: Sessions
 		lineageTag: c78811c1-aee9-4f9c-9484-70e9b0a8d177
 
+	/// Total waves ridden across sessions.
 	measure 'Waves Caught' = SUM(FactSession[WavesCaught])
 		formatString: #,0
 		displayFolder: Sessions
 		lineageTag: f837ac76-8b90-4ac5-afa9-5f6880500132
 
+	/// Total session time, in hours.
 	measure 'Hours in Water' = DIVIDE(SUM(FactSession[DurationMin]), 60)
 		formatString: #,0
 		displayFolder: Sessions
 		lineageTag: 6d35db2b-2e9a-4d0e-bcb9-64e07d76a94e
 
+	/// Waves caught divided by the number of sessions.
 	measure 'Avg Waves per Session' = DIVIDE([Waves Caught], [Total Sessions])
 		formatString: 0.0
 		displayFolder: Sessions
 		lineageTag: b2f8e461-a113-4988-83ea-6ce9f6d63914
 
+	/// Average wave face height across sessions, in feet.
 	measure 'Avg Wave Height (ft)' = AVERAGE(FactSession[WaveHeightFt])
 		formatString: 0.0
 		displayFolder: Conditions
 		lineageTag: a9771648-ef19-4c82-a013-341a599796d4
 
+	/// Average of the 1 to 5 session ratings.
 	measure 'Avg Session Rating' = AVERAGE(FactSession[SessionRating])
 		formatString: 0.00
 		displayFolder: Conditions
 		lineageTag: d460a79e-0420-4c5f-8894-1f73689a9529
 
+	/// Longest single ride across the selected sessions, in seconds.
 	measure 'Longest Ride (s)' = MAX(FactSession[LongestRideSec])
 		formatString: 0.0
 		displayFolder: Conditions
 		lineageTag: 5eb826e5-4d80-40bf-81c8-877bd99cf67e
 
+	/// Average water temperature across sessions, in degrees Celsius.
 	measure 'Avg Water Temp (C)' = AVERAGE(FactSession[WaterTempC])
 		formatString: 0.0
 		displayFolder: Conditions
 		lineageTag: f764ccd9-572a-4ce6-9376-52062d7fa6fa
 
+	/// Number of distinct surfers with at least one session.
 	measure 'Active Surfers' = DISTINCTCOUNT(FactSession[SurferKey])
 		formatString: #,0
 		displayFolder: Sessions
 		lineageTag: d30fafa9-142f-4704-9dac-f65b161a10d1
 
+	/// Unique identifier of the session.
 	column SessionID
 		dataType: int64
 		isHidden
@@ -56,6 +67,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Date of the session. Joins to DimDate.
 	column DateKey
 		dataType: int64
 		isHidden
@@ -66,6 +78,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Spot surfed. Joins to DimSpot.
 	column SpotKey
 		dataType: int64
 		isHidden
@@ -76,6 +89,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Surfer who logged the session. Joins to DimSurfer.
 	column SurferKey
 		dataType: int64
 		isHidden
@@ -86,6 +100,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Board ridden. Joins to DimBoard.
 	column BoardKey
 		dataType: int64
 		isHidden
@@ -96,6 +111,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Time in the water, in minutes.
 	column DurationMin
 		dataType: int64
 		formatString: #,0
@@ -105,6 +121,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Number of waves ridden in the session.
 	column WavesCaught
 		dataType: int64
 		formatString: #,0
@@ -114,6 +131,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Average wave face height during the session, in feet.
 	column WaveHeightFt
 		dataType: double
 		formatString: 0.0
@@ -123,6 +141,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Longest single ride in the session, in seconds.
 	column LongestRideSec
 		dataType: double
 		formatString: 0.0
@@ -141,6 +160,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Water temperature in degrees Celsius.
 	column WaterTempC
 		dataType: double
 		formatString: 0.0
@@ -150,6 +170,7 @@ table FactSession
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Surfer's rating of the session, from 1 (poor) to 5 (epic).
 	column SessionRating
 		dataType: int64
 		formatString: 0

@@ -1,7 +1,9 @@
+/// Calendar dimension with one row per day from 1 Jan 2024 to 31 Dec 2025. Marked as the model's date table.
 table DimDate
 	lineageTag: 31dd470c-54c8-4602-b710-a23fc015c3f9
 	dataCategory: Time
 
+	/// Surrogate key in yyyymmdd form. Joins to the fact tables.
 	column DateKey
 		dataType: int64
 		isHidden
@@ -12,6 +14,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Calendar date. Key column of the date table.
 	column Date
 		dataType: dateTime
 		isKey
@@ -24,6 +27,7 @@ table DimDate
 
 		annotation UnderlyingDateTimeDataType = Date
 
+	/// Calendar year.
 	column Year
 		dataType: int64
 		formatString: 0
@@ -33,6 +37,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Calendar quarter, Q1 to Q4.
 	column Quarter
 		dataType: string
 		lineageTag: ab7d0f2a-e22f-4317-8a14-6aa96a2f638d
@@ -41,6 +46,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Month number, 1 to 12. Used to sort MonthName.
 	column MonthNum
 		dataType: int64
 		isHidden
@@ -51,6 +57,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Full month name.
 	column MonthName
 		dataType: string
 		lineageTag: 920dfca0-b297-4895-852f-4feb54f04a8a
@@ -60,6 +67,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Month and two-digit year, for example Jan 24.
 	column MonthYear
 		dataType: string
 		lineageTag: d871e924-468f-49c8-8d0f-fe40e0fccd63
@@ -69,6 +77,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Year and month as yyyymm. Used to sort MonthYear.
 	column YearMonthKey
 		dataType: int64
 		isHidden
@@ -79,6 +88,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// ISO day of week, 1 = Monday. Used to sort DayName.
 	column DayOfWeekNum
 		dataType: int64
 		isHidden
@@ -89,6 +99,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Short day name.
 	column DayName
 		dataType: string
 		lineageTag: 5be660e7-86c7-4272-9d93-bfe33db2fe19
@@ -106,6 +117,7 @@ table DimDate
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Northern hemisphere season for the date.
 	column Season
 		dataType: string
 		lineageTag: 48c303a9-af35-4068-a6f6-f8fd8facbad4

@@ -1,4 +1,4 @@
-expression DataFolder = "C:\Users\user\SurfAnalytics\Data\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+expression DataFolder = "C:\Users\user\OneDrive\Documents\GitHub\Surf-Dash\Data\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
 	lineageTag: 1dc63d43-b998-460c-afb4-4a3eb9ef475e
 
 	annotation PBI_ResultType = Text

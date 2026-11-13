@@ -1,0 +1,44 @@
+site_name: Surf Analytics model docs
+site_description: Data dictionary, data catalogue and bus matrix generated from the Power BI semantic model.
+repo_url: !ENV REPO_URL
+edit_uri: ""
+
+theme:
+  name: material
+  features:
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+# No nav section: MkDocs builds it from the files, so new table pages appear without editing this file.
+
+extra_css:
+  - assets/dashboard.css
+extra_javascript:
+  - assets/dashboard.js
+
+markdown_extensions:
+  - tables
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+plugins:
+  - search

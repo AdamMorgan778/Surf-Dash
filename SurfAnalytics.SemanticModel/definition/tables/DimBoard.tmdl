@@ -1,6 +1,8 @@
+/// Surfboard models ridden in sessions. One row per board model.
 table DimBoard
 	lineageTag: 060eb08a-3eaf-4b44-bb7e-f519e6aaf8d7
 
+	/// Surrogate key for the board model.
 	column BoardKey
 		dataType: int64
 		isHidden
@@ -11,6 +13,7 @@ table DimBoard
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Model name of the board, including its length.
 	column BoardModel
 		dataType: string
 		lineageTag: 3fa23c22-85cb-4209-8539-c4c0c0f2ed63
@@ -19,6 +22,7 @@ table DimBoard
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Board family: Soft-top, Longboard, Funboard, Fish, Shortboard or Gun.
 	column BoardType
 		dataType: string
 		lineageTag: 28fcebcf-dadd-4ab3-b655-7fa64f0464ae
@@ -36,6 +40,7 @@ table DimBoard
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Manufacturer of the board.
 	column Brand
 		dataType: string
 		lineageTag: 02184688-a8d9-4cda-98b8-a88aaf72e1df

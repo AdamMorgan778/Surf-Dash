@@ -1,0 +1,61 @@
+# Business metadata that is not stored in the TMDL. One entry per table, keyed by table name.
+# Optional keys: kind (fact | dimension, overrides the automatic classification), business_process,
+# grain, owner, steward, refresh, sensitivity, tags.
+
+FactSession:
+  business_process: Surf sessions
+  grain: One row per surfer per session
+  owner: Surf Operations
+  steward: Session logging lead
+  refresh: Daily
+  sensitivity: Internal
+  tags: [sessions, conditions, performance]
+
+FactSales:
+  business_process: Shop and lesson sales
+  grain: One row per product per transaction
+  owner: Retail and Lessons
+  steward: Shop finance analyst
+  refresh: Daily
+  sensitivity: Internal, commercially sensitive
+  tags: [sales, revenue, lessons, rentals, retail]
+
+DimDate:
+  grain: One row per calendar day
+  owner: Data Team
+  steward: BI developer
+  refresh: Yearly
+  sensitivity: Public
+  tags: [calendar, conformed]
+
+DimSpot:
+  grain: One row per surf spot
+  owner: Surf Operations
+  steward: Location manager
+  refresh: On change
+  sensitivity: Public
+  tags: [location, conformed]
+
+DimSurfer:
+  grain: One row per surfer
+  owner: Membership
+  steward: Membership coordinator
+  refresh: Daily
+  sensitivity: Personal data (names)
+  tags: [customer, conformed, personal-data]
+
+DimBoard:
+  grain: One row per board model
+  owner: Surf Operations
+  steward: Equipment manager
+  refresh: On change
+  sensitivity: Internal
+  tags: [equipment]
+
+DimProduct:
+  grain: One row per product or service
+  owner: Retail and Lessons
+  steward: Shop finance analyst
+  refresh: On change
+  sensitivity: Internal
+  tags: [product, pricing]

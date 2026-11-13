@@ -1,6 +1,8 @@
+/// Lessons, rentals and retail products sold by the surf school. One row per product.
 table DimProduct
 	lineageTag: 80394025-c45d-46e9-a7e9-860204acaac1
 
+	/// Surrogate key for the product.
 	column ProductKey
 		dataType: int64
 		isHidden
@@ -11,6 +13,7 @@ table DimProduct
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Name of the product or service.
 	column Product
 		dataType: string
 		lineageTag: c0f1335b-90bb-4fc0-b628-93e0c8b22eb6
@@ -19,6 +22,7 @@ table DimProduct
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Product group: Lessons, Rentals or Retail.
 	column Category
 		dataType: string
 		lineageTag: 41754f55-2795-4378-a258-586f2e65bf44
@@ -27,6 +31,7 @@ table DimProduct
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Price before discount, in US dollars.
 	column ListPrice
 		dataType: decimal
 		formatString: \$#,0.00;(\$#,0.00);\$#,0.00

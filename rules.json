@@ -1,0 +1,14 @@
+[
+  {"id": "table-description", "check": "table_description", "severity": "error", "description": "Every table has a description."},
+  {"id": "measure-format", "check": "measure_format", "severity": "error", "description": "Every measure has a format string."},
+  {"id": "date-table-marked", "check": "date_table_marked", "severity": "error", "description": "Date tables are marked as date tables and have a key date column."},
+  {"id": "column-description", "check": "column_description", "severity": "warning", "description": "Every visible column has a description."},
+  {"id": "measure-description", "check": "measure_description", "severity": "warning", "description": "Every measure has a description."},
+  {"id": "fk-hidden", "check": "fk_hidden", "severity": "warning", "description": "Foreign key columns are hidden."},
+  {"id": "table-naming", "check": "table_naming", "severity": "warning", "description": "Table names are PascalCase with a Dim or Fact prefix."},
+  {"id": "column-naming", "check": "column_naming", "severity": "warning", "description": "Column names are PascalCase."},
+  {"id": "measure-naming", "check": "measure_naming", "severity": "warning", "description": "Measure names are Title Case with spaces."},
+  {"id": "column-table-prefix", "check": "column_table_prefix", "severity": "warning", "description": "No column name starts with its table name."},
+  {"id": "no-bidirectional", "check": "no_bidirectional", "severity": "warning", "description": "Relationships filter in one direction only."},
+  {"id": "implicit-measure", "check": "implicit_measure", "severity": "info", "description": "Visible numeric fact columns have no default aggregation; use a measure instead."}
+]

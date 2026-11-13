@@ -1,0 +1,40 @@
+# Glossary terms. Each entry: term, definition, and optionally related (model fields where it appears).
+
+- term: Session
+  definition: One continuous spell in the water by one surfer at one spot.
+  related: [FactSession, Total Sessions]
+- term: Wave caught
+  definition: A wave the surfer stood up on and rode. Attempts and missed take-offs are not counted.
+  related: [FactSession.WavesCaught, Waves Caught]
+- term: Wave height
+  definition: Height of the wave face in feet, averaged over the session.
+  related: [FactSession.WaveHeightFt, Avg Wave Height (ft)]
+- term: Break type
+  definition: What makes the wave break. Beach breaks form over sand, reef breaks over rock or coral, point breaks along a headland.
+  related: [DimSpot.BreakType]
+- term: Stance
+  definition: Which foot leads on the board. Regular is left foot forward, goofy is right foot forward.
+  related: [DimSurfer.Stance]
+- term: Skill level
+  definition: Self-declared ability of the surfer, from Beginner to Pro.
+  related: [DimSurfer.SkillLevel]
+- term: Soft-top
+  definition: A foam-covered board used for lessons and rentals because it is stable and forgiving.
+  related: [DimBoard.BoardType]
+- term: Gun
+  definition: A long, narrow board built for big waves.
+  related: [DimBoard.BoardType]
+- term: Session rating
+  definition: The surfer's own score for a session, from 1 (poor) to 5 (epic).
+  related: [FactSession.SessionRating, Avg Session Rating]
+- term: Revenue
+  definition: Sales value after discounts, in US dollars. Tax is not modelled.
+  related: [FactSales.Revenue, Total Revenue]
+- term: Transaction
+  definition: A sales line, meaning one product on one sale. A customer buying two products creates two lines.
+  related: [FactSales, Transactions]
+- term: Conformed dimension
+  definition: A dimension shared by more than one fact table, so figures from those facts can be compared on the same terms.
+  related: [DimDate, DimSpot, DimSurfer]
+- term: Documentation score
+  definition: Share of tables, visible columns and measures that have a description in the model.
