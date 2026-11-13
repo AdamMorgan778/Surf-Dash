@@ -109,3 +109,40 @@ def test_housekeeping_single_table_and_plain_issues():
     assert shape(_issue(body))["table"] == "DimBoard"
     plain = shape(_issue("### Table\n\nDimSpot\n\n### Request type\n\nQuestion"))
     assert "items" not in plain and plain["table"] == "DimSpot" and plain["requestType"] == "Question"
+
+
+def test_work_status_from_assignee_label_and_closed():
+    body = "### Items\n\n- [ ] DimBoard · LengthFt — Every visible column has a description. (rule: column-description)"
+    assert shape(_issue(body, ["housekeeping"]))["work"] == "raised"
+    assigned = _issue(body, ["housekeeping"]); assigned["assignees"] = [{"login": "alice"}]
+    out = shape(assigned)
+    assert out["work"] == "in-progress" and out["assignees"] == ["alice"]
+    assert shape(_issue(body, ["housekeeping", "in-progress"]))["work"] == "in-progress"
+    closed = _issue(body, ["housekeeping"]); closed["state"] = "closed"
+    assert shape(closed)["work"] == "closed"
+
+
+def test_attach_branches_marks_in_progress():
+    from fetch_issues import attach_branches
+    body = "### Items\n\n- [ ] DimBoard · LengthFt — Every visible column has a description. (rule: column-description)"
+    a, b = shape(_issue(body, ["housekeeping"])), shape(_issue(body, ["housekeeping"]))
+    b["number"] = 13
+    seen = {}
+
+    def fake(query, variables):
+        seen.update(query=query, variables=variables)
+        return {"data": {"repository": {"i12": {"linkedBranches": {"nodes": [{"ref": {"name": "12-housekeeping-fixes"}}]}},
+                                        "i13": {"linkedBranches": {"nodes": []}}}}}
+    assert attach_branches("o/r", [a, b, shape(_issue("### Table\n\nDimSpot"))], query=fake) == ""
+    assert "i12: issue(number: 12)" in seen["query"] and seen["variables"] == {"owner": "o", "name": "r"}
+    assert a["branches"] == ["12-housekeeping-fixes"] and a["work"] == "in-progress"
+    assert b["branches"] == [] and b["work"] == "raised"
+
+
+def test_attach_branches_without_token(monkeypatch):
+    from fetch_issues import attach_branches
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    body = "### Items\n\n- [ ] DimBoard · LengthFt — Every visible column has a description. (rule: column-description)"
+    i = shape(_issue(body, ["housekeeping"]))
+    assert "no GITHUB_TOKEN" in attach_branches("o/r", [i])
+    assert i["work"] == "raised"

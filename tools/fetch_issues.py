@@ -79,7 +79,61 @@ def shape(issue):
                    progress={"done": sum(1 for i in items if i["done"]), "total": len(items)})
         if not table:
             out["table"] = "Whole model" if len(tables) != 1 or tables[0] == "(model)" else tables[0]
+    out["assignees"] = [a["login"] for a in issue.get("assignees") or [] if a.get("login")]
+    out["branches"] = []
+    set_work(out)
     return out
+
+
+IN_PROGRESS_LABEL = "in-progress"
+
+
+def set_work(issue):
+    """Is anyone working on it? An assignee, a branch made with Create a branch, or the in-progress label."""
+    if issue["state"] != "open":
+        issue["work"] = "closed"
+    elif issue["assignees"] or issue["branches"] or IN_PROGRESS_LABEL in (l.lower() for l in issue["labels"]):
+        issue["work"] = "in-progress"
+    else:
+        issue["work"] = "raised"
+
+
+def _graphql(query, variables):
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise PermissionError("no token")
+    req = urllib.request.Request("https://api.github.com/graphql", data=json.dumps({"query": query, "variables": variables}).encode(),
+                                 headers={"Authorization": f"Bearer {token}", "User-Agent": "model-docs-build",
+                                          "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.load(resp)
+
+
+def attach_branches(slug, issues, query=_graphql):
+    """Add the branches linked to each open housekeeping issue (made with Create a branch) in one GraphQL call.
+
+    GraphQL always needs a token. Without one the check is skipped and assignees and labels still decide `work`.
+    Returns a note when it could not run.
+    """
+    wanted = [i for i in issues if i.get("items") is not None and i["state"] == "open"]
+    if not wanted:
+        return ""
+    owner, name = slug.split("/", 1)
+    fields = " ".join(f'i{i["number"]}: issue(number: {int(i["number"])}) {{ linkedBranches(first: 5) {{ nodes {{ ref {{ name }} }} }} }}'
+                      for i in wanted)
+    try:
+        data = query(f"query($owner: String!, $name: String!) {{ repository(owner: $owner, name: $name) {{ {fields} }} }}",
+                     {"owner": owner, "name": name})
+    except PermissionError:
+        return "Linked branches were not checked (no GITHUB_TOKEN)."
+    except (urllib.error.URLError, TimeoutError, ValueError) as e:
+        return f"Linked branches were not checked: {e}"
+    repo = ((data or {}).get("data") or {}).get("repository") or {}
+    for i in wanted:
+        nodes = ((repo.get(f"i{i['number']}") or {}).get("linkedBranches") or {}).get("nodes") or []
+        i["branches"] = [n["ref"]["name"] for n in nodes if n and n.get("ref")]
+        set_work(i)
+    return ""
 
 
 def fetch(slug):
@@ -88,7 +142,11 @@ def fetch(slug):
     since = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
     issues += [i for i in _pages(slug, f"state=closed&since={since}")
                if "pull_request" not in i and (i.get("closed_at") or "") >= since]
-    return [shape(i) for i in issues]
+    shaped = [shape(i) for i in issues]
+    note = attach_branches(slug, shaped)
+    if note:
+        print("NOTE:", note)
+    return shaped
 
 
 def main():

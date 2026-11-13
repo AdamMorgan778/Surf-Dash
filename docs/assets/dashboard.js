@@ -164,6 +164,8 @@
       });
       dataTable(document.getElementById("issues-table"), ["Issue", "Title", "Table", "Type", "Priority", "State"], list.map(function (i) {
         var state = i.state === "open" ? "Open" : "Closed " + i.closed;
+        if (i.work === "in-progress") state = "In progress" + (i.assignees && i.assignees.length ? " \u00B7 @" + i.assignees.join(", @") : "");
+        else if (i.work === "raised" && i.items) state = "Raised, not picked up";
         if (i.progress && i.progress.total) state += " · " + i.progress.done + "/" + i.progress.total + " done";
         return [link("#" + i.number, i.url), i.title, i.table, i.requestType, i.priority, state];
       }), issues.repo ? "No open issues, and none closed in the last " + issues.closedDays + " days." : "Issues appear here once the repository is on GitHub.");

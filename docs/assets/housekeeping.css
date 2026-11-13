@@ -17,7 +17,10 @@
 .hk-add-all.is-on { color: var(--md-default-fg-color--light); background: none; border-style: dashed; }
 .rpt-details-actions { margin: 0.25rem 0 0.1rem; }
 
-.md-typeset ul.hk-list li { display: flex; align-items: center; gap: 0.15rem; min-width: 0; }
+.md-typeset ul.fail-list.hk-list { columns: 1; }
+.md-typeset .detail-row ul.fail-list.hk-list { columns: 2 22rem; }
+.md-typeset ul.hk-list li:not(:has(.hk-add)) { padding-left: 1.6rem; }   /* locked items line up with the + buttons */
+.md-typeset ul.hk-list li { display: flex; align-items: center; gap: 0.15rem; min-width: 0; margin-bottom: 0.2rem; }
 .md-typeset ul.hk-list li a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hk-badge { flex: none; font-size: 0.55rem; font-weight: 700; padding: 0.02rem 0.4rem; margin-left: 0.3rem; border-radius: 999px;
   color: #6a4a00; background: #fde7b0; text-decoration: none; }
@@ -86,3 +89,40 @@
 .hk-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .hk-clear { margin-left: auto; }
 .hk-clear:hover, .hk-clear:focus-visible { color: var(--sev-error); border-color: var(--sev-error); }
+
+/* ---- Fix status tags: Raised / In progress / Done (items already in a housekeeping issue are locked) */
+body {
+  --work-raised: #7d8a94;
+  --work-progress: #e08a00;
+  --work-done: #1e8e3e;
+  --work-none: color-mix(in srgb, var(--md-primary-fg-color) 70%, transparent);
+}
+[data-md-color-scheme="slate"] { --work-raised: #9aa6af; --work-progress: #f6b23c; --work-done: #4cc46c; }
+
+.md-typeset a.hk-tag, a.hk-tag { flex: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.4rem;
+  padding: 0.08rem 0.5rem 0.08rem 0.35rem; border-radius: 999px; font-size: 0.56rem; font-weight: 700; line-height: 1.5;
+  white-space: nowrap; text-decoration: none; border: 1px solid transparent; }
+.hk-tag.is-raised { color: var(--md-default-fg-color--light); background: color-mix(in srgb, var(--work-raised) 14%, transparent);
+  border-color: color-mix(in srgb, var(--work-raised) 35%, transparent); }
+.hk-tag.is-in-progress { color: color-mix(in srgb, var(--work-progress) 70%, var(--md-default-fg-color)); background: color-mix(in srgb, var(--work-progress) 16%, transparent);
+  border-color: color-mix(in srgb, var(--work-progress) 45%, transparent); }
+.hk-tag.is-done { color: color-mix(in srgb, var(--work-done) 75%, var(--md-default-fg-color)); background: color-mix(in srgb, var(--work-done) 15%, transparent);
+  border-color: color-mix(in srgb, var(--work-done) 40%, transparent); }
+.md-typeset a.hk-tag:hover, a.hk-tag:focus-visible { text-decoration: underline; filter: saturate(1.2); }
+.hk-tag-who { font-weight: 600; opacity: 0.9; }
+.hk-tag-num { font-weight: 600; opacity: 0.75; }
+.hk-tag-who::before, .hk-tag-num::before { content: "\00b7"; margin-right: 0.3rem; opacity: 0.6; }
+
+.hk-tag-dot { display: inline-grid; place-items: center; width: 0.55rem; height: 0.55rem; border-radius: 50%; font-size: 0.45rem; line-height: 1; color: #fff; }
+.hk-tag.is-raised .hk-tag-dot, .hk-tag-dot.work-raised { background: none; box-shadow: inset 0 0 0 1.5px var(--work-raised); }
+.hk-tag.is-in-progress .hk-tag-dot, .hk-tag-dot.work-in-progress { background: var(--work-progress); animation: hk-pulse 1.8s ease-out infinite; }
+.hk-tag.is-done .hk-tag-dot, .hk-tag-dot.work-done { background: var(--work-done); }
+.hk-tag-dot.work-none { background: none; box-shadow: inset 0 0 0 1.5px var(--work-none); border-radius: 3px; }
+@keyframes hk-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--work-progress) 60%, transparent); } 70% { box-shadow: 0 0 0 5px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .hk-tag-dot { animation: none !important; } }
+
+.bar-fill.work-fill-none { background: var(--dash-bar); }
+.bar-fill.work-fill-raised { background: var(--work-raised); }
+.bar-fill.work-fill-in-progress { background: var(--work-progress); }
+.bar-fill.work-fill-done { background: var(--work-done); }
+.hk-add-all:disabled { cursor: default; opacity: 0.7; }

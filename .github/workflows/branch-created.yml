@@ -1,0 +1,20 @@
+name: Rebuild docs when a branch is created
+
+# "Create a branch" on a housekeeping issue marks its items In progress on the rules report.
+# A run started by the create event belongs to the new branch, and Pages only deploys from the
+# default branch, so this hands off to the publish workflow on the default branch instead of deploying.
+on: create
+
+permissions:
+  actions: write
+
+jobs:
+  rebuild:
+    if: github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start the publish workflow on the default branch
+        run: gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

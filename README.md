@@ -43,6 +43,16 @@ On the Rules report, click **+** next to any failing object (or **Add all** on a
 
 Each item is a checklist line ending in `(rule: <id>)`. `tools/fetch_issues.py` reads those lines back, so items in an open housekeeping issue show an **#n** badge in the report, and the Overview's issue list shows progress from the ticked boxes.
 
-One-time setup: create a label called `housekeeping` in the repository (Issues, Labels). GitHub only applies a form's label if it already exists.
+Once an item is in an open housekeeping issue it is locked (no **+** button) and carries a status tag:
+
+| Tag | Meaning |
+| --- | --- |
+| **Raised · #12** | In an issue, nobody has picked it up yet. |
+| **In progress · @name · #12** | Someone is on it: the issue has an assignee, a branch made with **Create a branch**, or the `in-progress` label. |
+| **Done · #12** | Ticked on the issue; it drops off the report once the fix reaches `main` and the rule passes. |
+
+To show you're working on something, assign yourself to the issue, use **Create a branch**, or add the `in-progress` label. The site rebuilds on issue changes (`publish.yml`) and when a branch is created (`branch-created.yml`, which starts `publish.yml` on the default branch). Linked branches are read through GitHub's GraphQL API, which needs a token, so local builds without `GITHUB_TOKEN` skip that check. The report's **Fix status** filter and the Rules tab's **Housekeeping status** chart use the same statuses.
+
+One-time setup: create the labels `housekeeping` and `in-progress` in the repository (Issues, Labels). GitHub only applies a form's label if it already exists.
 
 Pages must be set to deploy from GitHub Actions in the repository settings (Settings, Pages, Source).

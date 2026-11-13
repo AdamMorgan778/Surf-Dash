@@ -14,14 +14,21 @@
     { id: "rules", label: "Rules" },
     { id: "tables", label: "Tables" }
   ];
-  var GLOBAL_KEYS = ["category", "severity", "table", "type", "source", "rule"];
+  var GLOBAL_KEYS = ["category", "severity", "table", "type", "source", "work", "rule"];
   var STATE_KEYS = GLOBAL_KEYS.concat(["status", "q"]);   // status and q only filter the "All results" table
   var LABEL = { category: "Category", severity: "Severity", table: "Table", type: "Object type",
-                source: "Source", rule: "Rule", status: "Status", q: "Search" };
+                source: "Source", work: "Fix status", rule: "Rule", status: "Status", q: "Search" };
+  // Where a failing check stands in the housekeeping workflow.
+  var WORK = [
+    { id: "none", label: "Not raised" },
+    { id: "raised", label: "Raised" },
+    { id: "in-progress", label: "In progress" },
+    { id: "done", label: "Done" }
+  ];
 
   var app, root, results, model, issues, ruleById = {}, state = {}, view = "overview", ui = {};
   // Housekeeping list: failing checks a viewer has picked, kept in this browser only.
-  var HK_KEY = "surf-dash-housekeeping-v1", basket = [], basketMeta = {}, raised = {}, failByKey = {};
+  var HK_KEY = "surf-dash-housekeeping-v1", basket = [], basketMeta = {}, raised = {}, failByKey = {}, droppedRaised = 0;
   var sorts = { rules: { key: "fail", dir: -1 }, tables: { key: "fail", dir: -1 }, all: { key: "severity", dir: 1 },
                 drawer: { key: "severity", dir: 1 } };
   var expanded = {}, showPassing = false, drawer = null;
@@ -59,6 +66,7 @@
   function valueLabel(key, v) {
     if (key === "table") return tableLabel(v);
     if (key === "source") return sourceLabel(v);
+    if (key === "work") return workLabel(v);
     if (key === "rule") return ruleText(v);
     if (key === "q") return "“" + v + "”";
     if (key === "status") return v === "fail" ? "Failing" : v === "pass" ? "Passing" : "All";
@@ -105,7 +113,8 @@
     for (var i = 0; i < GLOBAL_KEYS.length; i++) {
       var k = GLOBAL_KEYS[i];
       if (!state[k] || except.indexOf(k) !== -1) continue;
-      if (k === "source" ? sourceOf(r) !== state.source : r[k] !== state[k]) return false;
+      var v = k === "source" ? sourceOf(r) : k === "work" ? workOf(r) : r[k];
+      if (v !== state[k]) return false;
     }
     return true;
   }
@@ -135,7 +144,8 @@
      ["severity", SEVS.map(function (s) { return s.id; })],
      ["table", uniq(results.results.map(function (r) { return r.table; })).sort(sortTables)],
      ["type", uniq(results.results.map(function (r) { return r.type; })).sort()],
-     ["source", ["bpa", "project"]]].forEach(function (d) {
+     ["source", ["bpa", "project"]],
+     ["work", WORK.map(function (w) { return w.id; })]].forEach(function (d) {
       var key = d[0], sel = el("select", { id: "rf-" + key }, [el("option", { value: "", text: "All" })]);
       d[1].forEach(function (v) { sel.appendChild(el("option", { value: v, text: valueLabel(key, v) })); });
       sel.addEventListener("change", function () { setFilter(key, sel.value); });
@@ -144,8 +154,8 @@
     });
     ui.chips = el("div", { class: "rules-chips" });
     ui.stamp = el("div", { class: "rpt-stamp", text: "Model read " + (results.generated || model.generated) });
-    ui.header.appendChild(el("div", { class: "rpt-header-row" }, [selects, ui.stamp]));
-    ui.header.appendChild(ui.chips);
+    ui.header.appendChild(el("div", { class: "rpt-header-row" }, [selects]));
+    ui.header.appendChild(el("div", { class: "rpt-chip-row" }, [ui.chips, ui.stamp]));
     app.appendChild(ui.header);
 
     ui.tabs = el("div", { class: "rpt-tabs", role: "tablist", "aria-label": "Report pages" });
@@ -339,7 +349,7 @@
         el("div", { class: "rpt-details-rule" }, [sevChip(g[id][0].severity), el("span", { text: ruleText(id) }),
           el("span", { class: "rpt-count", text: String(g[id].length) })]),
         el("div", { class: "rpt-details-actions" }, [addAllButton(g[id])]),
-        el("ul", { class: "fail-list hk-list" }, g[id].map(function (r) { return el("li", {}, [addButton(r), objectLink(r), raisedBadge(r)]); }))]));
+        el("ul", { class: "fail-list hk-list" }, g[id].map(function (r) { return el("li", {}, [addButton(r), objectLink(r), statusTag(r)]); }))]));
     });
   }
 
@@ -398,9 +408,24 @@
                                            data: function () { return failing(scoped(["rule"])); } }));
     details(visual("Failing objects", { span: 5, cls: "rpt-details", sub: "Click + to add an item to your housekeeping list.", data: function () { return failing(scoped()); } }),
             "Click a rule on the left to list only its failing objects.");
-    passRate(visual("Pass rate by category", { span: 6, data: function () { return scoped(["category"]); } }));
-    sourceBars(visual("Failures by source", { span: 6, sub: "Best Practice Analyzer rules against this project's own rules.",
+    workBars(visual("Housekeeping status", { span: 4, sub: "Where the failing checks stand. Click a bar to filter.",
+                                             data: function () { return failing(scoped(["work"])); } }));
+    passRate(visual("Pass rate by category", { span: 4, data: function () { return scoped(["category"]); } }));
+    sourceBars(visual("Failures by source", { span: 4, sub: "Best Practice Analyzer rules against this project's own rules.",
                                               data: function () { return failing(scoped(["source"])); } }));
+  }
+  function workBars(host) {
+    clear(host);
+    var g = group(failing(scoped(["work"])), workOf), max = 1;
+    WORK.forEach(function (w) { max = Math.max(max, (g[w.id] || []).length); });
+    WORK.forEach(function (w) {
+      var n = (g[w.id] || []).length, tip = w.label + ": " + plural(n, "failing check");
+      var row = el("div", { class: "bar-row sbar-row" + (state.work && state.work !== w.id ? " is-dim" : "") + (state.work === w.id ? " is-on" : ""), title: tip }, [
+        el("div", { class: "bar-label" }, [el("span", { class: "hk-tag-dot work-" + w.id, "aria-hidden": "true", text: w.id === "done" ? "\u2713" : "" }), " " + w.label]),
+        el("div", { class: "bar-track" }, [el("div", { class: "bar-fill work-fill-" + w.id, style: "width:" + (100 * n / max) + "%" })]),
+        el("div", { class: "bar-value", text: String(n) })]);
+      host.appendChild(clickable(row, function () { toggle("work", w.id); }, tip));
+    });
   }
   function pageTables() {
     var rows = scoped(), byRule = group(rows, "rule"), byTable = group(rows, "table"), c = sevCounts(rows);
@@ -433,7 +458,7 @@
       return el("tr", { class: "detail-row" }, [el("td", {}), el("td", { colspan: String(span - 1) }, [
         el("div", { class: "fail-list-title" }, [plural(r.fail, "failing object") + " ", addAllButton(r.fails)]),
         rule.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), rule.fix]) : null,
-        el("ul", { class: "fail-list hk-list" }, r.fails.map(function (f) { return el("li", {}, [addButton(f), objectLink(f), raisedBadge(f)]); }))])]);
+        el("ul", { class: "fail-list hk-list" }, r.fails.map(function (f) { return el("li", {}, [addButton(f), objectLink(f), statusTag(f)]); }))])]);
     } });
     if (clean) {
       byRuleHost.appendChild(el("p", { class: "rpt-more" }, [el("button", { type: "button", class: "rules-chip",
@@ -499,7 +524,7 @@
       { key: "category", label: "Category", cell: function (x) { return x.category; } },
       { key: "table", label: "Table", cell: function (x) { return tableCell(x.r.table); } },
       { key: "object", label: "Object", cell: function (x) {
-          var a = x.r.link ? el("a", { href: x.r.link, text: x.object }) : el("span", { text: x.object }), b = raisedBadge(x.r);
+          var a = x.r.link ? el("a", { href: x.r.link, text: x.object }) : el("span", { text: x.object }), b = statusTag(x.r);
           return b ? el("span", {}, [a, " ", b]) : a; } },
       { key: "type", label: "Type", cell: function (x) { return cap(x.type); } },
       { key: "rule", label: "Rule", cell: function (x) { return x.rule; } },
@@ -603,7 +628,10 @@
   function loadBasket() {
     try {
       var saved = JSON.parse(localStorage.getItem(HK_KEY) || "{}");
-      basket = (saved.items || []).filter(function (k) { return failByKey[k]; });   // drop items that now pass
+      var kept = (saved.items || []).filter(function (k) { return failByKey[k]; });   // drop items that now pass
+      basket = kept.filter(function (k) { return !isLocked(failByKey[k]); });          // and items someone has raised
+      droppedRaised = kept.length - basket.length;
+      if (droppedRaised) saveBasket();
       basketMeta = saved.meta || {};
     } catch (e) { basket = []; basketMeta = {}; }
   }
@@ -625,15 +653,37 @@
     updatePill(on);
     if (drawer && drawer.mode === "list") renderDrawer();
   }
-  function raisedBadge(r) {
+  // The issue an item was raised in, preferring one where someone is working on it.
+  function raisedHit(r) {
     var hits = raised[hkKey(r)];
     if (!hits) return null;
-    return el("a", { class: "hk-badge" + (hits[0].done ? " is-done" : ""), href: hits[0].url,
-      title: (hits[0].done ? "Done in" : "Already raised in") + " open issue #" + hits[0].number, text: "#" + hits[0].number });
+    return hits.filter(function (h) { return h.work === "in-progress" && !h.done; })[0] || hits[0];
+  }
+  function workOf(r) {
+    if (r.status !== "fail") return "";
+    var h = raisedHit(r);
+    return !h ? "none" : h.done ? "done" : h.work === "in-progress" ? "in-progress" : "raised";
+  }
+  function workLabel(id) { return (WORK.filter(function (w) { return w.id === id; })[0] || {}).label || id; }
+  function isLocked(r) { return !!raisedHit(r); }
+  function statusTag(r) {
+    var h = raisedHit(r);
+    if (!h) return null;
+    var w = workOf(r), who = h.assignees.length ? "@" + h.assignees.join(", @") : "";
+    var tip = workLabel(w) + " in issue #" + h.number +
+      (w === "in-progress" ? (who ? ", assigned to " + who : "") + (h.branches.length ? ", branch " + h.branches.join(", ") : "") +
+                             (!who && !h.branches.length ? " (labelled in-progress)" : "") :
+       w === "raised" ? ". Nobody has picked it up yet: assign yourself or use Create a branch on the issue." :
+       ". Ticked on the issue; it clears from the report once the fix reaches main.");
+    return el("a", { class: "hk-tag is-" + w, href: h.url, title: tip }, [
+      el("span", { class: "hk-tag-dot", "aria-hidden": "true", text: w === "done" ? "\u2713" : "" }),
+      el("span", { text: workLabel(w) }),
+      w === "in-progress" && who ? el("span", { class: "hk-tag-who", text: who }) : null,
+      el("span", { class: "hk-tag-num", text: "#" + h.number })]);
   }
   // The + / ✓ toggle for one failing check.
   function addButton(r) {
-    if (r.status !== "fail") return null;
+    if (r.status !== "fail" || isLocked(r)) return null;   // raised items are locked; their status tag shows instead
     var k = hkKey(r);
     var b = el("button", { type: "button", class: "hk-add", "data-hk": k });
     b.addEventListener("click", function (e) { e.stopPropagation(); setInBasket([k], !inBasket(k)); });
@@ -641,21 +691,20 @@
     return b;
   }
   function paintAdd(b) {
-    var k = b.getAttribute("data-hk"), on = inBasket(k), r = failByKey[k], hits = raised[k];
+    var k = b.getAttribute("data-hk"), on = inBasket(k), r = failByKey[k];
     b.classList.toggle("is-on", on);
     b.setAttribute("aria-pressed", on ? "true" : "false");
     b.textContent = on ? "✓" : "+";
     var what = r ? objectText(r) : "this item";
     b.setAttribute("aria-label", (on ? "Remove " : "Add ") + what + (on ? " from" : " to") + " the housekeeping list");
-    b.title = on ? "In your housekeeping list. Click to remove." :
-      hits ? "Already raised in #" + hits[0].number + ". Click to add it to your list anyway." : "Add to your housekeeping list";
+    b.title = on ? "In your housekeeping list. Click to remove." : "Add to your housekeeping list";
   }
   function syncAddButtons() {
     document.querySelectorAll(".hk-add").forEach(paintAdd);
     document.querySelectorAll(".hk-add-all").forEach(function (b) { paintAddAll(b, b._keys); });
   }
   function addAllButton(rows) {
-    var keys = rows.filter(function (r) { return r.status === "fail"; }).map(hkKey);
+    var keys = rows.filter(function (r) { return r.status === "fail" && !isLocked(r); }).map(hkKey);
     var b = el("button", { type: "button", class: "hk-add-all" });
     b._keys = keys;
     b.addEventListener("click", function () {
@@ -665,6 +714,11 @@
     return b;
   }
   function paintAddAll(b, keys) {
+    if (!keys.length) {
+      b.disabled = true; b.classList.add("is-on");
+      b.textContent = "All raised"; b.title = "Every item under this rule is already in a housekeeping issue";
+      return;
+    }
     var all = keys.every(inBasket);
     b.classList.toggle("is-on", all);
     b.textContent = all ? "✓ All added" : "+ Add all (" + keys.length + ")";
@@ -679,6 +733,8 @@
     document.body.appendChild(ui.pill);
     document.body.appendChild(ui.toast);
     updatePill(false);
+    if (droppedRaised) toast(plural(droppedRaised, "item") + " in your housekeeping list " + (droppedRaised === 1 ? "has" : "have") +
+                             " since been raised in an issue, so " + (droppedRaised === 1 ? "it was" : "they were") + " taken off your list.");
   }
   function updatePill(bump) {
     ui.pill.hidden = !basket.length;
@@ -803,7 +859,7 @@
         el("div", { class: "hk-group-head" }, [sevChip(rule.severity), el("strong", { text: ruleText(id) }), el("span", { class: "rpt-count", text: String(g[id].length) })]),
         rule.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), rule.fix]) : null,
         el("ul", { class: "hk-items" }, g[id].map(function (r) {
-          return el("li", {}, [objectLink(r), raisedBadge(r),
+          return el("li", {}, [objectLink(r), statusTag(r),
             el("button", { type: "button", class: "hk-remove", "aria-label": "Remove " + objectText(r), title: "Remove", text: "×",
                            onclick: function () { setInBasket([hkKey(r)], false); } })]);
         }))]));
@@ -850,7 +906,8 @@
         if (i.state !== "open") return;
         (i.items || []).forEach(function (it) {
           var k = it.table + "|" + it.object + "|" + it.rule;
-          (raised[k] = raised[k] || []).push({ number: i.number, url: i.url, done: it.done });
+          (raised[k] = raised[k] || []).push({ number: i.number, url: i.url, done: it.done, work: i.work || "raised",
+                                              assignees: i.assignees || [], branches: i.branches || [] });
         });
       });
       loadBasket();
