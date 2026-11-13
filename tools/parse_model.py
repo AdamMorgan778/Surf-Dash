@@ -60,26 +60,35 @@ def parse_model(root=ROOT):
             if t["type"] != "table":
                 continue
             source = None
-            columns, measures = [], []
+            columns, measures, partitions = [], [], []
             for c in t["children"]:
                 p = c["props"]
                 common = {"name": c["name"], "description": c["description"], "line": c["line"],
                           "link": blob_link(file, c["line"], slug), "formatString": p.get("formatString") or ""}
                 if c["type"] == "column":
+                    # `column X = <DAX>` is a calculated column; plain data columns carry sourceColumn instead
                     columns.append({**common, "dataType": p.get("dataType", ""), "isHidden": p.get("isHidden") is True,
                                     "isKey": p.get("isKey") is True, "sortByColumn": p.get("sortByColumn") or "",
                                     "summarizeBy": p.get("summarizeBy", ""), "dataCategory": p.get("dataCategory") or "",
+                                    "sourceColumn": p.get("sourceColumn") or "", "expression": c["expression"],
+                                    "isCalculated": bool(c["expression"]),
+                                    "isAvailableInMdx": p.get("isAvailableInMdx", True) not in ("false", False),
                                     "isForeignKey": False, "isPrimaryKey": False})
                 elif c["type"] == "measure":
                     measures.append({**common, "expression": c["expression"],
                                      "displayFolder": p.get("displayFolder") or "", "isHidden": p.get("isHidden") is True})
                 elif c["type"] == "partition":
-                    m = re.search(r'"([^"]+\.csv)"', str(p.get("source", "")))
+                    src = str(p.get("source", ""))
+                    partitions.append({"name": c["name"], "kind": c["expression"], "mode": p.get("mode") or "",
+                                       "source": src, "line": c["line"], "link": blob_link(file, c["line"], slug)})
+                    m = re.search(r'"([^"]+\.csv)"', src)
                     source = m.group(1) if m else source
             tables.append({"name": t["name"], "description": t["description"], "file": file, "line": t["line"],
                            "link": blob_link(file, t["line"], slug), "dataCategory": t["props"].get("dataCategory") or "",
                            "isHidden": t["props"].get("isHidden") is True, "source": source,
                            "rowCount": row_count(root, source), "columns": columns, "measures": measures,
+                           "partitions": partitions,
+                           "isCalculated": any(pt["kind"] == "calculated" for pt in partitions),
                            "meta": meta.get(t["name"]) or {}})
 
     relationships = []
@@ -93,9 +102,16 @@ def parse_model(root=ROOT):
             relationships.append({"fromTable": ft, "fromColumn": fc, "toTable": tt, "toColumn": tc,
                                   "crossFilter": r["props"].get("crossFilteringBehavior", "oneDirection"),
                                   "isActive": r["props"].get("isActive", "true") != "false",
+                                  "fromCardinality": r["props"].get("fromCardinality", "many"),
+                                  "toCardinality": r["props"].get("toCardinality", "one"),
                                   "line": r["line"], "link": blob_link(rel(rpath, root), r["line"], slug)})
 
     by_name = {t["name"]: t for t in tables}
+    for r in relationships:
+        for side in ("from", "to"):
+            col = next((c for c in by_name.get(r[side + "Table"], {}).get("columns", [])
+                        if c["name"] == r[side + "Column"]), None)
+            r[side + "DataType"] = col["dataType"] if col else ""
     many, one = {r["fromTable"] for r in relationships}, {r["toTable"] for r in relationships}
     for r in relationships:
         for tn, cn, flag in ((r["fromTable"], r["fromColumn"], "isForeignKey"), (r["toTable"], r["toColumn"], "isPrimaryKey")):

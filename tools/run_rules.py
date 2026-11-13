@@ -1,4 +1,10 @@
-"""Apply rules.json to build/model.json and write build/results.json."""
+"""Apply rules.json to build/model.json and write build/results.json.
+
+Each rule in rules.json names a `check`: a function in this file that takes the model and returns one row per
+object in the rule's scope, with status pass or fail. Most of the checks below `# ---- Best Practice Analyzer`
+are Python ports of rules in Microsoft's standard Tabular Editor BPA rule set; their BPA IDs are in rules.json.
+They read only what the TMDL files hold, so BPA rules that need Vertipaq statistics or a live model are not here.
+"""
 import json
 import os
 import re
@@ -8,6 +14,7 @@ from tmdl import BUILD, ROOT
 NUMERIC = {"int64", "double", "decimal"}
 SMALL_WORDS = {"in", "per", "of", "vs", "and", "the", "to", "by", "on", "at", "for"}
 PASCAL = re.compile(r"^[A-Z][A-Za-z0-9]*$")
+MODEL_TABLE = "(model)"  # table value for rows about the model as a whole
 
 
 def _row(obj, typ, table, ok, link):
@@ -88,8 +95,8 @@ def column_table_prefix(model):
 
 
 def no_bidirectional(model):
-    return [_row(f"{r['fromTable']}[{r['fromColumn']}] to {r['toTable']}[{r['toColumn']}]", "relationship",
-                 r["fromTable"], r["crossFilter"] != "bothDirections", r["link"]) for r in model["relationships"]]
+    return [_row(_rel_name(r), "relationship", r["fromTable"], r["crossFilter"] != "bothDirections", r["link"])
+            for r in model["relationships"]]
 
 
 def implicit_measure(model):
@@ -97,9 +104,325 @@ def implicit_measure(model):
             for t, c in _columns(model, True) if t["kind"] == "fact" and c["dataType"] in NUMERIC]
 
 
-CHECKS = {f.__name__: f for f in (table_description, column_description, measure_description, measure_format,
-                                  date_table_marked, fk_hidden, table_naming, column_naming, measure_naming,
-                                  column_table_prefix, no_bidirectional, implicit_measure)}
+# ---- shared helpers for the BPA ports
+
+def _rel_name(r):
+    return f"{r['fromTable']}[{r['fromColumn']}] to {r['toTable']}[{r['toColumn']}]"
+
+
+def _model_row(model, ok):
+    name = model.get("name") or "Model"
+    return _row(name, "model", MODEL_TABLE, ok, "")
+
+
+def _objects(model):
+    """Every named object: (type, table name, object). Partitions included."""
+    for t in model["tables"]:
+        yield "table", t["name"], t
+        for c in t["columns"]:
+            yield "column", t["name"], c
+        for m in t["measures"]:
+            yield "measure", t["name"], m
+        for p in t.get("partitions", []):
+            yield "partition", t["name"], p
+
+
+def _dax(expr):
+    """DAX with string literals and comments removed, so text inside them is not mistaken for code."""
+    expr = re.sub(r'"(?:[^"]|"")*"', '""', expr or "")
+    expr = re.sub(r"/\*.*?\*/", " ", expr, flags=re.S)
+    return re.sub(r"(//|--)[^\n]*", " ", expr)
+
+
+_REF = re.compile(r"('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)?\[((?:[^\]]|\]\])+)\]")
+
+
+def _refs(expr):
+    """[(table or None, name)] for every bracketed reference in a DAX expression."""
+    out = []
+    for m in _REF.finditer(_dax(expr)):
+        table = m.group(1)
+        if table and table.startswith("'"):
+            table = table[1:-1].replace("''", "'")
+        out.append((table, m.group(2).replace("]]", "]")))
+    return out
+
+
+def _names(model):
+    measures = {m["name"].lower() for _, m in _measures(model)}
+    columns = {(t["name"].lower(), c["name"].lower()) for t, c in _columns(model)}
+    return measures, columns
+
+
+def _dax_objects(model):
+    """Objects that carry DAX: measures and calculated columns."""
+    for t, m in _measures(model):
+        yield "measure", t, m
+    for t, c in _columns(model):
+        if c.get("isCalculated"):
+            yield "column", t, c
+
+
+def _referenced_columns(model):
+    """(table, column) pairs, lower case, referenced from any DAX expression."""
+    used = set()
+    for _, t, o in _dax_objects(model):
+        for table, name in _refs(o["expression"]):
+            used.add(((table or t["name"]).lower(), name.lower()))
+    return used
+
+
+# ---- Best Practice Analyzer: DAX expressions
+
+def dax_columns_qualified(model):
+    measures, _ = _names(model)
+    return [_row(o["name"], typ, t["name"],
+                 all(table or name.lower() in measures for table, name in _refs(o["expression"])), o["link"])
+            for typ, t, o in _dax_objects(model)]
+
+
+def dax_measures_unqualified(model):
+    measures, columns = _names(model)
+
+    def ok(expr):
+        return not any(table and name.lower() in measures and (table.lower(), name.lower()) not in columns
+                       for table, name in _refs(expr))
+    return [_row(o["name"], typ, t["name"], ok(o["expression"]), o["link"]) for typ, t, o in _dax_objects(model)]
+
+
+def duplicate_measures(model):
+    norm = {}
+    for _, m in _measures(model):
+        key = re.sub(r"\s+", "", m["expression"] or "").lower()
+        norm[key] = norm.get(key, 0) + 1
+    return [_row(m["name"], "measure", t["name"],
+                 not m["expression"] or norm[re.sub(r"\s+", "", m["expression"]).lower()] == 1, m["link"])
+            for t, m in _measures(model)]
+
+
+def use_divide(model):
+    return [_row(o["name"], typ, t["name"], not re.search(r"[\])]\s*/", _dax(o["expression"])), o["link"])
+            for typ, t, o in _dax_objects(model)]
+
+
+def avoid_iferror(model):
+    return [_row(o["name"], typ, t["name"], not re.search(r"\bIFERROR\s*\(", _dax(o["expression"]), re.I), o["link"])
+            for typ, t, o in _dax_objects(model)]
+
+
+def measure_direct_reference(model):
+    measures, _ = _names(model)
+
+    def ok(expr):
+        m = re.fullmatch(r"\s*(?:'(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)?\[((?:[^\]]|\]\])+)\]\s*", _dax(expr))
+        return not (m and m.group(1).replace("]]", "]").lower() in measures)
+    return [_row(m["name"], "measure", t["name"], ok(m["expression"]), m["link"]) for t, m in _measures(model)]
+
+
+def no_evaluateandlog(model):
+    return [_row(m["name"], "measure", t["name"], not re.search(r"\bEVALUATEANDLOG\s*\(", _dax(m["expression"]), re.I),
+                 m["link"]) for t, m in _measures(model)]
+
+
+def use_treatas(model):
+    return [_row(m["name"], "measure", t["name"], not re.search(r"\bINTERSECT\s*\(", _dax(m["expression"]), re.I),
+                 m["link"]) for t, m in _measures(model)]
+
+
+def inactive_relationship_used(model):
+    activated = set()
+    for _, _, o in _dax_objects(model):
+        for args in re.findall(r"\bUSERELATIONSHIP\s*\(([^)]*)\)", _dax(o["expression"]), re.I):
+            activated.add(frozenset((t or "").lower() + "|" + n.lower() for t, n in _refs(args)))
+    return [_row(_rel_name(r), "relationship", r["fromTable"],
+                 r["isActive"] or frozenset({f"{r['fromTable']}|{r['fromColumn']}".lower(),
+                                             f"{r['toTable']}|{r['toColumn']}".lower()}) in activated, r["link"])
+            for r in model["relationships"]]
+
+
+# ---- Best Practice Analyzer: error prevention
+
+def column_source_column(model):
+    return [_row(c["name"], "column", t["name"], bool(c.get("sourceColumn")), c["link"])
+            for t, c in _columns(model) if not c.get("isCalculated") and not t.get("isCalculated")]
+
+
+def measure_expression(model):
+    return [_row(m["name"], "measure", t["name"], bool((m["expression"] or "").strip()), m["link"]) for t, m in _measures(model)]
+
+
+def relationship_same_type(model):
+    return [_row(_rel_name(r), "relationship", r["fromTable"], r.get("fromDataType") == r.get("toDataType"), r["link"])
+            for r in model["relationships"]]
+
+
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def invalid_characters(model):
+    return [_row(o["name"], typ, table, not _CONTROL.search(o["name"] + (o.get("description") or "")), o["link"])
+            for typ, table, o in _objects(model)]
+
+
+# ---- Best Practice Analyzer: maintenance
+
+def table_has_relationship(model):
+    related = {r["fromTable"] for r in model["relationships"]} | {r["toTable"] for r in model["relationships"]}
+    return [_row(t["name"], "table", t["name"], t["name"] in related, t["link"]) for t in model["tables"]]
+
+
+def unused_hidden_column(model):
+    used = _referenced_columns(model)
+    for r in model["relationships"]:
+        used |= {(r["fromTable"].lower(), r["fromColumn"].lower()), (r["toTable"].lower(), r["toColumn"].lower())}
+    for t, c in _columns(model):
+        if c["sortByColumn"]:
+            used.add((t["name"].lower(), c["sortByColumn"].lower()))
+    return [_row(c["name"], "column", t["name"], (t["name"].lower(), c["name"].lower()) in used, c["link"])
+            for t, c in _columns(model) if c["isHidden"]]
+
+
+def unused_hidden_measure(model):
+    refs = {name.lower() for _, _, o in _dax_objects(model) for _, name in _refs(o["expression"])}
+    return [_row(m["name"], "measure", t["name"], m["name"].lower() in refs, m["link"])
+            for t, m in _measures(model) if m.get("isHidden")]
+
+
+# ---- Best Practice Analyzer: naming
+
+def trim_names(model):
+    return [_row(o["name"], typ, table, o["name"] == o["name"].strip(), o["link"]) for typ, table, o in _objects(model)]
+
+
+def special_characters(model):
+    return [_row(o["name"], typ, table, not re.search(r"[\t\r\n]", o["name"]), o["link"]) for typ, table, o in _objects(model)]
+
+
+def first_letter_capital(model):
+    return [_row(o["name"], typ, table, o["name"][:1] == o["name"][:1].upper(), o["link"])
+            for typ, table, o in _objects(model)
+            if typ in ("table", "measure") or (typ == "column" and o.get("isCalculated"))]
+
+
+def partition_name(model):
+    return [_row(t["partitions"][0]["name"], "partition", t["name"], t["partitions"][0]["name"] == t["name"],
+                 t["partitions"][0]["link"]) for t in model["tables"] if len(t.get("partitions", [])) == 1]
+
+
+# ---- Best Practice Analyzer: performance
+
+def no_floating_point(model):
+    return [_row(c["name"], "column", t["name"], c["dataType"] != "double", c["link"])
+            for t, c in _columns(model) if c["dataType"] in NUMERIC]
+
+
+def model_has_date_table(model):
+    return [_model_row(model, any(t["dataCategory"] == "Time" and any(c["isKey"] and c["dataType"] == "dateTime"
+                                                                      for c in t["columns"]) for t in model["tables"]))]
+
+
+def no_auto_date_tables(model):
+    return [_row(t["name"], "table", t["name"], not re.match(r"^(LocalDateTable_|DateTableTemplate_)", t["name"]), t["link"])
+            for t in model["tables"]]
+
+
+def no_snowflake(model):
+    many = {r["fromTable"] for r in model["relationships"]}
+    one = {r["toTable"] for r in model["relationships"]}
+    return [_row(t["name"], "table", t["name"], not (t["name"] in many and t["name"] in one), t["link"])
+            for t in model["tables"]]
+
+
+def limit_bidirectional(model):
+    rels = model["relationships"]
+    risky = sum(1 for r in rels if r["crossFilter"] == "bothDirections"
+                or (r.get("fromCardinality") == "many" and r.get("toCardinality") == "many"))
+    return [_model_row(model, not rels or risky / len(rels) <= 0.3)]
+
+
+_HEAVY_M = re.compile(r"Table\.(Join|NestedJoin|Group|Sort|Pivot)\b|Value\.NativeQuery|Odbc\.Query|OleDb\.Query|\[\s*Query\s*=")
+
+
+def minimize_power_query(model):
+    return [_row(p["name"], "partition", t["name"], not _HEAVY_M.search(p["source"]), p["link"])
+            for t in model["tables"] for p in t.get("partitions", []) if p["kind"] == "m"]
+
+
+# ---- Best Practice Analyzer: formatting
+
+def relationship_integer(model):
+    rows, seen = [], set()
+    by_name = {t["name"]: t for t in model["tables"]}
+    for r in model["relationships"]:
+        for side in ("from", "to"):
+            key = (r[side + "Table"], r[side + "Column"])
+            if key in seen:
+                continue
+            seen.add(key)
+            col = next((c for c in by_name.get(key[0], {}).get("columns", []) if c["name"] == key[1]), None)
+            rows.append(_row(key[1], "column", key[0], r.get(side + "DataType") == "int64", col["link"] if col else r["link"]))
+    return rows
+
+
+def mark_primary_keys(model):
+    return [_row(c["name"], "column", t["name"], c["isKey"], c["link"])
+            for t, c in _columns(model) if c["isPrimaryKey"] and t["dataCategory"] != "Time"]
+
+
+_AGG = re.compile(r"\b(SUM|AVERAGE|MIN|MAX|COUNT|COUNTA|DISTINCTCOUNT|MEDIAN)\s*\(\s*"
+                  r"('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)\[((?:[^\]]|\]\])+)\]", re.I)
+
+
+def hide_fact_columns(model):
+    aggregated = set()
+    for _, m in _measures(model):
+        for _, table, name in _AGG.findall(_dax(m["expression"])):
+            aggregated.add((table.strip("'").replace("''", "'").lower(), name.replace("]]", "]").lower()))
+    return [_row(c["name"], "column", t["name"], (t["name"].lower(), c["name"].lower()) not in aggregated, c["link"])
+            for t, c in _columns(model, True) if c["dataType"] in NUMERIC]
+
+
+PERCENT_FORMAT = "#,0.0%;-#,0.0%;#,0.0%"
+
+
+def percentage_format(model):
+    return [_row(m["name"], "measure", t["name"], m["formatString"] == PERCENT_FORMAT, m["link"])
+            for t, m in _measures(model) if "%" in m["formatString"]]
+
+
+def integer_format(model):
+    return [_row(m["name"], "measure", t["name"], m["formatString"] in ("#,0", "#,0.0"), m["link"])
+            for t, m in _measures(model)
+            if m["formatString"] and "$" not in m["formatString"] and "%" not in m["formatString"]]
+
+
+def data_category(model):
+    rows = []
+    for t, c in _columns(model, True):
+        geo_text = c["dataType"] == "string" and re.search(r"country|continent|city", c["name"], re.I)
+        geo_num = c["dataType"] in NUMERIC and re.search(r"latitude|longitude", c["name"], re.I)
+        if geo_text or geo_num:
+            rows.append(_row(c["name"], "column", t["name"], bool(c["dataCategory"]), c["link"]))
+    return rows
+
+
+def month_sorted(model):
+    return [_row(c["name"], "column", t["name"], bool(c["sortByColumn"]), c["link"])
+            for t, c in _columns(model)
+            if c["dataType"] == "string" and re.search(r"month", c["name"], re.I) and not re.search(r"months", c["name"], re.I)]
+
+
+CHECKS = {f.__name__: f for f in (
+    table_description, column_description, measure_description, measure_format, date_table_marked, fk_hidden,
+    table_naming, column_naming, measure_naming, column_table_prefix, no_bidirectional, implicit_measure,
+    dax_columns_qualified, dax_measures_unqualified, duplicate_measures, use_divide, avoid_iferror,
+    measure_direct_reference, no_evaluateandlog, use_treatas, inactive_relationship_used,
+    column_source_column, measure_expression, relationship_same_type, invalid_characters,
+    table_has_relationship, unused_hidden_column, unused_hidden_measure,
+    trim_names, special_characters, first_letter_capital, partition_name,
+    no_floating_point, model_has_date_table, no_auto_date_tables, no_snowflake, limit_bidirectional, minimize_power_query,
+    relationship_integer, mark_primary_keys, hide_fact_columns, percentage_format, integer_format, data_category,
+    month_sorted)}
 
 
 def documentation_score(model):
@@ -112,7 +435,7 @@ def run(model, rules):
     results = []
     for rule in rules:
         for row in CHECKS[rule["check"]](model):
-            results.append({**row, "rule": rule["id"], "severity": rule["severity"]})
+            results.append({**row, "rule": rule["id"], "severity": rule["severity"], "category": rule.get("category", "")})
     fails = {s: sum(1 for r in results if r["status"] == "fail" and r["severity"] == s) for s in ("error", "warning", "info")}
     return {"generated": model.get("generated", ""), "score": documentation_score(model), "failures": fails,
             "rules": rules, "results": results}
@@ -127,7 +450,7 @@ def main():
     with open(os.path.join(BUILD, "results.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     s, fl = out["score"], out["failures"]
-    print(f"results.json: score {s['pct']}% ({s['described']}/{s['total']}), "
+    print(f"results.json: {len(rules)} rules, score {s['pct']}% ({s['described']}/{s['total']}), "
           f"failures: {fl['error']} error, {fl['warning']} warning, {fl['info']} info")
 
 

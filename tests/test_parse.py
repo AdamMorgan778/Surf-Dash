@@ -62,6 +62,18 @@ def test_columns_and_measures(model):
     assert by_name(by_name(model["tables"], "DimSpot")["columns"], "SpotKey")["isPrimaryKey"]
 
 
+def test_fields_used_by_bpa_rules(model):
+    sales = by_name(model["tables"], "FactSales")
+    revenue = by_name(sales["columns"], "Revenue")
+    assert revenue["sourceColumn"] == "Revenue" and not revenue["isCalculated"] and revenue["isAvailableInMdx"]
+    assert len(sales["partitions"]) == 1
+    part = sales["partitions"][0]
+    assert part["name"] == "FactSales" and part["kind"] == "m" and part["mode"] == "import"
+    assert "Csv.Document" in part["source"] and "Table.TransformColumnTypes" in part["source"]
+    assert all(r["fromDataType"] == r["toDataType"] == "int64" for r in model["relationships"])
+    assert all(r["toCardinality"] == "one" for r in model["relationships"])
+
+
 def test_issue_form_fields():
     body = "### Table\n\nDimSpot\n\n### Request type\n\nData quality\n\n### Priority\n\n_No response_\n\n### Details\n\nLine one\nLine two"
     fields = form_fields(body)

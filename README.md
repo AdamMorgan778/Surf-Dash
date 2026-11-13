@@ -23,4 +23,16 @@ python -m venv .venv
 | `.github/ISSUE_TEMPLATE/data-request.yml` | Issue form. Its Table dropdown is how an issue is matched to a table; update the list when tables change. |
 | `.github/workflows/publish.yml` | Builds and deploys the site to GitHub Pages on push to `main`, on issue changes and daily. |
 
+## Rules
+
+`rules.json` lists 45 rules. 37 of them match a rule in Microsoft's [Best Practice Analyzer rule set](https://github.com/microsoft/Analysis-Services/tree/master/BestPracticeRules) and carry its ID in `bpaId`: 33 are Python ports of BPA rules, and 4 of the project's original rules were already equivalent. The other 8 are the project's own documentation and naming rules. The built site has a Rules page listing them all with their current pass and fail counts.
+
+Each rule names a `check`, which is a function in `tools/run_rules.py` that takes the parsed model and returns one pass or fail row per object. To add a rule:
+
+1. Write the function and add it to `CHECKS`.
+2. Add an entry to `rules.json` with an `id`, `check`, `category`, `severity` (error, warning or info), `description` and, if it comes from BPA, `bpaId`.
+3. Add a breaking case for it to `BREAK` in `tests/test_rules.py`. The tests fail until every check has one.
+
+To silence a rule, lower its severity or remove its entry from `rules.json`.
+
 Pages must be set to deploy from GitHub Actions in the repository settings (Settings, Pages, Source).

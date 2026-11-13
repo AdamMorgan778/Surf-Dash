@@ -66,7 +66,8 @@
 
   function run(model, results, issues) {
     var f = { table: document.getElementById("f-table"), owner: document.getElementById("f-owner"),
-              severity: document.getElementById("f-severity"), status: document.getElementById("f-status") };
+              category: document.getElementById("f-category"), severity: document.getElementById("f-severity"),
+              status: document.getElementById("f-status") };
     var ownerOf = {}, owners = [];
     model.tables.forEach(function (t) {
       var o = (t.meta && t.meta.owner) || "Unassigned";
@@ -75,8 +76,12 @@
       f.table.appendChild(el("option", { value: t.name, text: t.name }));
     });
     owners.sort().forEach(function (o) { f.owner.appendChild(el("option", { value: o, text: o })); });
-    var ruleText = {};
-    results.rules.forEach(function (r) { ruleText[r.id] = r.description; });
+    var ruleText = {}, categories = [];
+    results.rules.forEach(function (r) {
+      ruleText[r.id] = r.description;
+      if (r.category && categories.indexOf(r.category) === -1) categories.push(r.category);
+    });
+    categories.sort().forEach(function (c) { f.category.appendChild(el("option", { value: c, text: c })); });
     var note = "Model read " + model.generated + ". Issues fetched " + issues.fetched + ".";
     if (issues.note) note += " " + issues.note;
     document.getElementById("dash-note").textContent = note;
@@ -91,7 +96,10 @@
 
     function render() {
       var tables = model.tables.filter(function (t) { return tableInScope(t.name); });
-      var scoped = results.results.filter(function (r) { return tableInScope(r.table); });
+      // rule rows in scope of the table, owner and category filters ("(model)" rows are model-wide)
+      var scoped = results.results.filter(function (r) {
+        return tableInScope(r.table) && (!f.category.value || r.category === f.category.value);
+      });
       var fails = scoped.filter(function (r) { return r.status === "fail" && (!f.severity.value || r.severity === f.severity.value); });
       var openIssues = issues.issues.filter(function (i) {
         return i.state === "open" && (i.table === "Unassigned" || i.table === "Whole model" ? !f.table.value && !f.owner.value : tableInScope(i.table));
@@ -123,6 +131,11 @@
         var n = scoped.filter(function (r) { return r.status === "fail" && r.severity === s.id; }).length;
         return { label: s.label, value: n, display: String(n), cls: "sev-" + s.id, icon: s.icon };
       }), { empty: "No rule results match the filters." });
+      var byCat = {};
+      fails.forEach(function (r) { var k = r.category || "Other"; byCat[k] = (byCat[k] || 0) + 1; });
+      bars(document.getElementById("chart-category"), Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a] || a.localeCompare(b); }).map(function (k) {
+        return { label: k, value: byCat[k], display: String(byCat[k]) };
+      }), { empty: "No rule failures match the filters." });
       var byTable = {};
       openIssues.forEach(function (i) { byTable[i.table] = (byTable[i.table] || 0) + 1; });
       bars(document.getElementById("chart-issues"), Object.keys(byTable).sort(function (a, b) { return byTable[b] - byTable[a]; }).map(function (k) {
@@ -136,10 +149,13 @@
       var order = { error: 0, warning: 1, info: 2 };
       rows.sort(function (a, b) { return order[a.severity] - order[b.severity] || a.table.localeCompare(b.table) || a.object.localeCompare(b.object); });
       document.getElementById("rules-heading").textContent = "Rule results (" + rows.length + ")";
-      dataTable(document.getElementById("rules-table"), ["Severity", "Table", "Object", "Rule", "Status"], rows.slice(0, 500).map(function (r) {
+      var shown = rows.slice(0, 500);
+      if (rows.length > shown.length) document.getElementById("rules-heading").textContent += ", first " + shown.length + " shown";
+      dataTable(document.getElementById("rules-table"), ["Severity", "Category", "Table", "Object", "Rule", "Status"], shown.map(function (r) {
         var sev = SEVERITIES.filter(function (s) { return s.id === r.severity; })[0];
+        var tableCell = r.table === "(model)" ? el("span", { text: "Whole model" }) : link(r.table, "dictionary/" + r.table + "/");
         return [el("span", { class: "sev-chip" }, [el("span", { class: "bar-icon sev-" + r.severity, text: sev.icon, "aria-hidden": "true" }), document.createTextNode(" " + sev.label)]),
-                link(r.table, "dictionary/" + r.table + "/"), link(r.object, r.link), ruleText[r.rule] || r.rule, cap(r.status)];
+                r.category || "", tableCell, link(r.object, r.link), ruleText[r.rule] || r.rule, cap(r.status)];
       }), "Nothing matches the filters.");
 
       // issues table

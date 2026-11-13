@@ -76,9 +76,12 @@ def table_page(t, model, results, issues):
         [f"[{r['fromTable']}]({r['fromTable']}.md)[{r['fromColumn']}]", f"[{r['toTable']}]({r['toTable']}.md)[{r['toColumn']}]",
          "Both" if r["crossFilter"] == "bothDirections" else "Single", "Yes" if r["isActive"] else "No"] for r in rels])]
     rule_text = {r["id"]: r["description"] for r in results["rules"]}
-    fails = [r for r in results["results"] if r["table"] == t["name"] and r["status"] == "fail"]
-    L += ["## Rule failures", "", table(["Object", "Rule", "Severity"], [
-        [f"[`{r['object']}`]({r['link']})" if r["link"] else f"`{r['object']}`", rule_text[r["rule"]], r["severity"].capitalize()]
+    order = {"error": 0, "warning": 1, "info": 2}
+    fails = sorted((r for r in results["results"] if r["table"] == t["name"] and r["status"] == "fail"),
+                   key=lambda r: (order[r["severity"]], r["category"], r["object"]))
+    L += ["## Rule failures", "", table(["Object", "Rule", "Category", "Severity"], [
+        [f"[`{r['object']}`]({r['link']})" if r["link"] else f"`{r['object']}`", rule_text[r["rule"]],
+         r.get("category", ""), r["severity"].capitalize()]
         for r in fails])]
     open_issues = [i for i in issues["issues"] if i["table"] == t["name"] and i["state"] == "open"]
     L += ["## Open issues", "", table(["Issue", "Title", "Type", "Priority"], [
@@ -142,6 +145,35 @@ def bus_matrix(model):
             for d in dims])])
 
 
+BPA_SOURCE = "https://github.com/microsoft/Analysis-Services/tree/master/BestPracticeRules"
+
+
+def rules_page(results):
+    counts = {}
+    for r in results["results"]:
+        c = counts.setdefault(r["rule"], {"pass": 0, "fail": 0})
+        c[r["status"]] += 1
+    rules = results["rules"]
+    L = ["# Rules", "",
+         f"The {len(rules)} rules the model is checked against on every build. "
+         f"{sum(1 for r in rules if r.get('bpaId'))} of them match a rule in Microsoft's "
+         f"[Best Practice Analyzer rule set]({BPA_SOURCE}) (BPA) and carry its ID. The rest are this project's own "
+         "documentation and naming rules.", "",
+         "Rules are defined in `rules.json` and the checks are written in Python in `tools/run_rules.py`. "
+         "BPA rules that need Vertipaq statistics or a live model, or that cover features this model does not use "
+         "(row-level security, calculation groups, DirectQuery and similar), are not included.", "",
+         table(["Severity", "Failing", "Passing"], [
+             [s.capitalize(), results["failures"][s],
+              sum(counts.get(r["id"], {}).get("pass", 0) for r in rules if r["severity"] == s)]
+             for s in ("error", "warning", "info")])]
+    for cat in sorted({r.get("category") or "Other" for r in rules}):
+        L += [f"## {cat}", "", table(["Rule", "Severity", "Failing", "Passing", "BPA rule"], [
+            [r["description"], r["severity"].capitalize(), counts.get(r["id"], {}).get("fail", 0),
+             counts.get(r["id"], {}).get("pass", 0), f"`{r['bpaId']}`" if r.get("bpaId") else "Project rule"]
+            for r in rules if (r.get("category") or "Other") == cat])]
+    return "\n".join(L)
+
+
 def glossary():
     path = os.path.join(ROOT, "metadata", "glossary.yaml")
     terms = []
@@ -163,10 +195,11 @@ def main():
     write(os.path.join(DOCS, "catalogue.md"), catalogue(model))
     write(os.path.join(DOCS, "bus-matrix.md"), bus_matrix(model))
     write(os.path.join(DOCS, "glossary.md"), glossary())
+    write(os.path.join(DOCS, "rules.md"), rules_page(results))
     os.makedirs(os.path.join(DOCS, "data"), exist_ok=True)
     for name in ("model.json", "results.json", "issues.json"):
         shutil.copyfile(os.path.join(BUILD, name), os.path.join(DOCS, "data", name))
-    print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary")
+    print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rules")
 
 
 if __name__ == "__main__":
