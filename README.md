@@ -1,5 +1,7 @@
 # Surf Analytics
 
+**[Open the live dashboard](https://adammorgan778.github.io/Surf-Dash/)**
+
 A Power BI project (`SurfAnalytics.pbip`) about surfing, with a documentation site generated from its semantic model: a data dictionary, a data catalogue, a bus matrix and an overview dashboard with rule results and GitHub issues.
 
 ## Build the docs
