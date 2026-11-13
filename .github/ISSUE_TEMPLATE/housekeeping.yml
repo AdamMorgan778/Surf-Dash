@@ -1,0 +1,32 @@
+name: Housekeeping
+description: Model clean-up tasks picked from the rules report. Not a new requirement.
+title: "[Housekeeping] "
+labels: ["housekeeping"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These are clean-up fixes to the Surf Analytics model, usually raised from the **Rules report** on the docs site with the housekeeping list.
+        To start work, open **Development** in the right-hand sidebar of this issue and choose **Create a branch**. Tick each item as it is done; the report reads the ticks back.
+  - type: textarea
+    id: items
+    attributes:
+      label: Items
+      description: One checklist line per fix. Keep the "(rule: ...)" part at the end of each line so the docs site can match it back to the report.
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else the person picking this up should know.

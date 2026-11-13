@@ -1,0 +1,36 @@
+/* Site-wide touches. The left navigation sits on a soft tinted panel so it reads as separate from the page.
+   Tints are mixed from the theme's primary colour. They are defined on body, not :root, because Material sets
+   the teal primary colour on body; at :root it would still be the default indigo. */
+body {
+  --sb-bg: color-mix(in srgb, var(--md-primary-fg-color) 8%, var(--md-default-bg-color));
+  --sb-edge: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
+  --sb-hover: color-mix(in srgb, var(--md-primary-fg-color) 12%, transparent);
+  --sb-active: color-mix(in srgb, var(--md-primary-fg-color) 20%, transparent);
+  --sb-title: color-mix(in srgb, var(--md-primary-fg-color) 80%, var(--md-default-fg-color));
+}
+[data-md-color-scheme="slate"] {
+  --sb-bg: color-mix(in srgb, var(--md-primary-fg-color) 14%, var(--md-default-bg-color));
+  --sb-edge: color-mix(in srgb, var(--md-primary-fg-color) 35%, transparent);
+  --sb-hover: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
+  --sb-active: color-mix(in srgb, var(--md-primary-fg-color) 34%, transparent);
+  --sb-title: color-mix(in srgb, var(--md-accent-fg-color) 85%, var(--md-default-fg-color));
+}
+
+@media screen and (min-width: 76.25em) {
+  /* Material sizes the scroll wrapper to the visible height, so it is the element to paint. */
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    background: var(--sb-bg);
+    border: 1px solid var(--sb-edge);
+    border-radius: 14px;
+    padding: 0.5rem 0.35rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .md-sidebar--primary .md-nav__title {
+    background: transparent; box-shadow: none;
+    font-size: 0.6rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--sb-title);
+  }
+  .md-sidebar--primary a.md-nav__link { border-radius: 7px; padding: 0.3rem 0.55rem; margin-top: 0.12rem; transition: background 0.15s; }
+  .md-sidebar--primary a.md-nav__link:hover { background: var(--sb-hover); }
+  .md-sidebar--primary a.md-nav__link--active { background: var(--sb-active); font-weight: 700; }
+  .md-sidebar--primary label.md-nav__link { padding-left: 0.55rem; }
+}

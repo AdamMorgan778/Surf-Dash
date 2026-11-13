@@ -19,7 +19,9 @@
   var LABEL = { category: "Category", severity: "Severity", table: "Table", type: "Object type",
                 source: "Source", rule: "Rule", status: "Status", q: "Search" };
 
-  var app, root, results, model, ruleById = {}, state = {}, view = "overview", ui = {};
+  var app, root, results, model, issues, ruleById = {}, state = {}, view = "overview", ui = {};
+  // Housekeeping list: failing checks a viewer has picked, kept in this browser only.
+  var HK_KEY = "surf-dash-housekeeping-v1", basket = [], basketMeta = {}, raised = {}, failByKey = {};
   var sorts = { rules: { key: "fail", dir: -1 }, tables: { key: "fail", dir: -1 }, all: { key: "severity", dir: 1 },
                 drawer: { key: "severity", dir: 1 } };
   var expanded = {}, showPassing = false, drawer = null;
@@ -40,7 +42,7 @@
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
   function uniq(list) { var seen = {}, out = []; list.forEach(function (v) { if (!seen[v]) { seen[v] = 1; out.push(v); } }); return out; }
-  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : /(s|x|ch|sh)$/.test(word) ? "es" : "s"); }
   function clickable(node, fn, label) {
     node.setAttribute("role", "button"); node.setAttribute("tabindex", "0");
     if (label) node.setAttribute("aria-label", label);
@@ -336,7 +338,8 @@
       host.appendChild(el("div", { class: "rpt-details-group" }, [
         el("div", { class: "rpt-details-rule" }, [sevChip(g[id][0].severity), el("span", { text: ruleText(id) }),
           el("span", { class: "rpt-count", text: String(g[id].length) })]),
-        el("ul", { class: "fail-list" }, g[id].map(function (r) { return el("li", {}, [objectLink(r)]); }))]));
+        el("div", { class: "rpt-details-actions" }, [addAllButton(g[id])]),
+        el("ul", { class: "fail-list hk-list" }, g[id].map(function (r) { return el("li", {}, [addButton(r), objectLink(r), raisedBadge(r)]); }))]));
     });
   }
 
@@ -383,17 +386,17 @@
     ruleBars(visual("Most-failed rules", { span: 4, sub: "Top 5. Click a rule to filter.", data: function () { return failing(scoped(["rule"])); } }), 5);
   }
   function pageMatrix() {
-    var m = visual("Failures by table and category", { span: 8, cls: "rpt-tall",
+    var m = visual("Failures by table and category", { span: 7, cls: "rpt-tall",
       sub: "Click a cell to select that table and category, or a heading to select a whole row or column. Hover a cell for its severity split.",
       data: matrixRows });
     matrix(m, false);
-    details(visual("Failing objects", { span: 4, cls: "rpt-details", data: function () { return failing(scoped()); } }),
+    details(visual("Failing objects", { span: 5, cls: "rpt-details", sub: "Click + to add an item to your housekeeping list.", data: function () { return failing(scoped()); } }),
             "Select a cell, row or column in the matrix to narrow this list.");
   }
   function pageRules() {
-    ruleBars(visual("Most-failed rules", { span: 8, sub: "Every rule with at least one failure. Click a rule to select it.",
+    ruleBars(visual("Most-failed rules", { span: 7, sub: "Every rule with at least one failure. Click a rule to select it.",
                                            data: function () { return failing(scoped(["rule"])); } }));
-    details(visual("Failing objects", { span: 4, cls: "rpt-details", data: function () { return failing(scoped()); } }),
+    details(visual("Failing objects", { span: 5, cls: "rpt-details", sub: "Click + to add an item to your housekeeping list.", data: function () { return failing(scoped()); } }),
             "Click a rule on the left to list only its failing objects.");
     passRate(visual("Pass rate by category", { span: 6, data: function () { return scoped(["category"]); } }));
     sourceBars(visual("Failures by source", { span: 6, sub: "Best Practice Analyzer rules against this project's own rules.",
@@ -411,7 +414,7 @@
                sev: SEV_ORDER[rule.severity], source: rule.bpaId ? "a" : "z", bpaId: rule.bpaId,
                fail: fail.length, pass: byRule[id].length - fail.length, fails: fail };
     }).filter(function (r) { if (!r.fail) clean++; return showPassing || r.fail; });
-    var byRuleHost = visual("By rule", { span: 7, sub: "Click ▸ to list a rule's failing objects.", data: function () { return failing(scoped()); } });
+    var byRuleHost = visual("By rule", { span: 12, sub: "Click ▸ to list a rule's failing objects.", data: function () { return failing(scoped()); } });
     sortable(byRuleHost, "rules", [
       { key: "", label: "", cls: "expand-col", cell: function (r) {
           if (!r.fail) return "";
@@ -426,9 +429,11 @@
       { key: "pass", label: "Passing", num: true, cell: function (r) { return r.pass; } }
     ], ruleRows, { height: "26rem", empty: clean ? "No rules are failing for these filters." : "No rules match the filters.", detail: function (r, span) {
       if (!expanded[r.id] || !r.fail) return null;
+      var rule = ruleById[r.id] || {};
       return el("tr", { class: "detail-row" }, [el("td", {}), el("td", { colspan: String(span - 1) }, [
-        el("div", { class: "fail-list-title", text: plural(r.fail, "failing object") }),
-        el("ul", { class: "fail-list" }, r.fails.map(function (f) { return el("li", {}, [objectLink(f)]); }))])]);
+        el("div", { class: "fail-list-title" }, [plural(r.fail, "failing object") + " ", addAllButton(r.fails)]),
+        rule.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), rule.fix]) : null,
+        el("ul", { class: "fail-list hk-list" }, r.fails.map(function (f) { return el("li", {}, [addButton(f), objectLink(f), raisedBadge(f)]); }))])]);
     } });
     if (clean) {
       byRuleHost.appendChild(el("p", { class: "rpt-more" }, [el("button", { type: "button", class: "rules-chip",
@@ -436,7 +441,7 @@
         onclick: function () { showPassing = !showPassing; render(); } })]));
     }
 
-    sortable(visual("By table", { span: 5, data: function () { return failing(scoped()); } }), "tables", [
+    sortable(visual("By table", { span: 12, data: function () { return failing(scoped()); } }), "tables", [
       { key: "label", label: "Table", cell: function (r) { return tableCell(r.table); } },
       { key: "error", label: "Error", num: true, cell: function (r) { return r.error; } },
       { key: "warning", label: "Warning", num: true, cell: function (r) { return r.warning; } },
@@ -489,10 +494,13 @@
   // ---- tables
   function resultsTable(host, id, rows, height, empty) {
     sortable(host, id, [
+      { key: "", label: "", cls: "expand-col", cell: function (x) { return addButton(x.r) || ""; } },
       { key: "severity", label: "Severity", cell: function (x) { return sevChip(x.r.severity); } },
       { key: "category", label: "Category", cell: function (x) { return x.category; } },
       { key: "table", label: "Table", cell: function (x) { return tableCell(x.r.table); } },
-      { key: "object", label: "Object", cell: function (x) { return x.r.link ? el("a", { href: x.r.link, text: x.object }) : x.object; } },
+      { key: "object", label: "Object", cell: function (x) {
+          var a = x.r.link ? el("a", { href: x.r.link, text: x.object }) : el("span", { text: x.object }), b = raisedBadge(x.r);
+          return b ? el("span", {}, [a, " ", b]) : a; } },
       { key: "type", label: "Type", cell: function (x) { return cap(x.type); } },
       { key: "rule", label: "Rule", cell: function (x) { return x.rule; } },
       { key: "status", label: "Status", cell: function (x) { return x.status === "fail" ? "Fail" : "Pass"; } }
@@ -540,7 +548,7 @@
 
   // ---- Show data drawer
   function openDrawer(title, rows, opener) {
-    drawer = { title: title, rows: rows, opener: opener };
+    drawer = { mode: "data", title: title, rows: rows, opener: opener };
     sorts.drawer = { key: "severity", dir: 1 };
     ui.drawerBackdrop.hidden = false;
     ui.drawer.hidden = false;
@@ -549,7 +557,9 @@
     ui.drawer.querySelector(".rpt-drawer-close").focus();
   }
   function renderDrawer() {
+    if (drawer.mode === "list") { renderList(); return; }
     clear(ui.drawer);
+    ui.drawer.classList.remove("is-list");
     var c = sevCounts(drawer.rows);
     ui.drawer.appendChild(el("div", { class: "rpt-drawer-head" }, [
       el("div", {}, [el("h2", { id: "rpt-drawer-title", text: drawer.title }),
@@ -588,6 +598,236 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
 
+  // ---- housekeeping list
+  function hkKey(r) { return r.table + "|" + r.object + "|" + r.rule; }
+  function loadBasket() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(HK_KEY) || "{}");
+      basket = (saved.items || []).filter(function (k) { return failByKey[k]; });   // drop items that now pass
+      basketMeta = saved.meta || {};
+    } catch (e) { basket = []; basketMeta = {}; }
+  }
+  function saveBasket() {
+    try { localStorage.setItem(HK_KEY, JSON.stringify({ items: basket, meta: basketMeta })); } catch (e) { /* private mode: list lasts this visit */ }
+  }
+  function inBasket(k) { return basket.indexOf(k) !== -1; }
+  function setInBasket(keys, on) {
+    var changed = 0;
+    keys.forEach(function (k) {
+      var i = basket.indexOf(k);
+      if (on && i === -1) { basket.push(k); changed++; }
+      if (!on && i !== -1) { basket.splice(i, 1); changed++; }
+    });
+    if (!changed) return;
+    if (!basket.length) basketMeta = {};
+    saveBasket();
+    syncAddButtons();
+    updatePill(on);
+    if (drawer && drawer.mode === "list") renderDrawer();
+  }
+  function raisedBadge(r) {
+    var hits = raised[hkKey(r)];
+    if (!hits) return null;
+    return el("a", { class: "hk-badge" + (hits[0].done ? " is-done" : ""), href: hits[0].url,
+      title: (hits[0].done ? "Done in" : "Already raised in") + " open issue #" + hits[0].number, text: "#" + hits[0].number });
+  }
+  // The + / ✓ toggle for one failing check.
+  function addButton(r) {
+    if (r.status !== "fail") return null;
+    var k = hkKey(r);
+    var b = el("button", { type: "button", class: "hk-add", "data-hk": k });
+    b.addEventListener("click", function (e) { e.stopPropagation(); setInBasket([k], !inBasket(k)); });
+    paintAdd(b);
+    return b;
+  }
+  function paintAdd(b) {
+    var k = b.getAttribute("data-hk"), on = inBasket(k), r = failByKey[k], hits = raised[k];
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.textContent = on ? "✓" : "+";
+    var what = r ? objectText(r) : "this item";
+    b.setAttribute("aria-label", (on ? "Remove " : "Add ") + what + (on ? " from" : " to") + " the housekeeping list");
+    b.title = on ? "In your housekeeping list. Click to remove." :
+      hits ? "Already raised in #" + hits[0].number + ". Click to add it to your list anyway." : "Add to your housekeeping list";
+  }
+  function syncAddButtons() {
+    document.querySelectorAll(".hk-add").forEach(paintAdd);
+    document.querySelectorAll(".hk-add-all").forEach(function (b) { paintAddAll(b, b._keys); });
+  }
+  function addAllButton(rows) {
+    var keys = rows.filter(function (r) { return r.status === "fail"; }).map(hkKey);
+    var b = el("button", { type: "button", class: "hk-add-all" });
+    b._keys = keys;
+    b.addEventListener("click", function () {
+      setInBasket(keys, !keys.every(inBasket));
+    });
+    paintAddAll(b, keys);
+    return b;
+  }
+  function paintAddAll(b, keys) {
+    var all = keys.every(inBasket);
+    b.classList.toggle("is-on", all);
+    b.textContent = all ? "✓ All added" : "+ Add all (" + keys.length + ")";
+    b.title = all ? "Remove these from your housekeeping list" : "Add every item under this rule to your housekeeping list";
+  }
+
+  function buildHousekeeping() {
+    ui.pill = el("button", { type: "button", class: "hk-pill", hidden: "", "aria-haspopup": "dialog" });
+    ui.pill.addEventListener("click", function () { openList(ui.pill); });
+    ui.pill.addEventListener("animationend", function () { ui.pill.classList.remove("bump"); });
+    ui.toast = el("div", { class: "hk-toast", role: "status", "aria-live": "polite", hidden: "" });
+    document.body.appendChild(ui.pill);
+    document.body.appendChild(ui.toast);
+    updatePill(false);
+  }
+  function updatePill(bump) {
+    ui.pill.hidden = !basket.length;
+    clear(ui.pill);
+    ui.pill.appendChild(el("span", { class: "hk-pill-icon", "aria-hidden": "true", text: "🧹" }));
+    ui.pill.appendChild(el("span", { text: "Housekeeping list" }));
+    ui.pill.appendChild(el("span", { class: "hk-pill-count", text: String(basket.length) }));
+    ui.pill.setAttribute("aria-label", "Open your housekeeping list, " + plural(basket.length, "item"));
+    if (bump) { ui.pill.classList.remove("bump"); void ui.pill.offsetWidth; ui.pill.classList.add("bump"); }
+  }
+  var toastTimer;
+  function toast(msg) {
+    ui.toast.textContent = msg;
+    ui.toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { ui.toast.hidden = true; }, 6000);
+  }
+
+  function basketRows() { return basket.map(function (k) { return failByKey[k]; }).filter(Boolean); }
+  function defaultTitle(rows) {
+    var tables = uniq(rows.map(function (r) { return tableLabel(r.table); }));
+    var where = tables.slice(0, 3).join(", ") + (tables.length > 3 ? " and " + (tables.length - 3) + " more" : "");
+    return "Housekeeping: " + plural(rows.length, "fix") + " across " + where;
+  }
+  function itemsMarkdown(rows) {
+    var g = group(rows, "rule");
+    return Object.keys(g).sort(function (a, b) {
+      return SEV_ORDER[g[a][0].severity] - SEV_ORDER[g[b][0].severity] || ruleText(a).localeCompare(ruleText(b));
+    }).map(function (id) {
+      var rule = ruleById[id] || {};
+      var head = "**" + ruleText(id) + "** (" + (rule.severity || "") + (rule.bpaId ? ", BPA " + rule.bpaId : "") + ")\n" +
+                 (rule.fix ? "How to fix: " + rule.fix + "\n" : "");
+      return head + "\n" + g[id].map(function (r) {
+        return "- [ ] " + tableLabel(r.table) + " · " + r.object + " — " + ruleText(id) + " (rule: " + id + ")";
+      }).join("\n");
+    }).join("\n\n");
+  }
+  function issueUrl(title, items, notes) {
+    var p = new URLSearchParams();
+    p.set("template", "housekeeping.yml");
+    p.set("title", title);
+    p.set("items", items);
+    if (notes) p.set("notes", notes);
+    return "https://github.com/" + model.repo + "/issues/new?" + p.toString();
+  }
+  // Copy inside the click itself, so the browser treats it as user-initiated. Returns true when it worked.
+  function copySync(text) {
+    var active = document.activeElement, ta = el("textarea", { style: "position:fixed;top:0;left:0;opacity:0", "aria-hidden": "true" });
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    if (active && active.focus) active.focus();
+    return ok;
+  }
+  function copyText(text) {
+    if (copySync(text)) return Promise.resolve();
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return Promise.reject(new Error("copy blocked"));
+  }
+  function createIssue() {
+    var rows = basketRows(), title = (basketMeta.title || "").trim() || defaultTitle(rows);
+    var items = itemsMarkdown(rows), notes = (basketMeta.notes || "").trim();
+    var url = issueUrl(title, items, notes);
+    if (url.length <= 7000) {
+      window.open(url, "_blank", "noopener");
+      toast("GitHub opened in a new tab with the issue filled in. Press Submit there.");
+      return;
+    }
+    // Too long for a link: copy the list, and open GitHub straight away (opening later would be popup-blocked).
+    var copied = copySync(items);
+    window.open(issueUrl(title, "Paste the list from your clipboard here (it was too long to send in the link).", notes), "_blank", "noopener");
+    if (copied) {
+      toast("The list was too long for a link, so it is on your clipboard. Paste it into Items on GitHub, then press Submit.");
+    } else {
+      toast("The list was too long for a link and your browser blocked the clipboard. Use Copy as Markdown here, then paste it into Items on GitHub.");
+    }
+  }
+
+  function openList(opener) {
+    drawer = { mode: "list", opener: opener };
+    ui.drawerBackdrop.hidden = false;
+    ui.drawer.hidden = false;
+    document.body.classList.add("rpt-drawer-open");
+    renderDrawer();
+    ui.drawer.querySelector(".rpt-drawer-close").focus();
+  }
+  function renderList() {
+    clear(ui.drawer);
+    ui.drawer.classList.add("is-list");
+    var rows = basketRows(), tables = uniq(rows.map(function (r) { return tableLabel(r.table); }));
+    ui.drawer.appendChild(el("div", { class: "rpt-drawer-head hk-head" }, [
+      el("div", {}, [el("h2", { id: "rpt-drawer-title" }, [el("span", { "aria-hidden": "true", text: "🧹 " }), "Housekeeping list"]),
+        el("p", { class: "rpt-sub", text: rows.length ? plural(rows.length, "item") + " across " + plural(tables.length, "table") + ". Kept in this browser until you raise it."
+                                                       : "Nothing picked yet." })]),
+      el("button", { type: "button", class: "rpt-drawer-close", "aria-label": "Close", text: "×", onclick: closeDrawer })]));
+    var body = el("div", { class: "rpt-drawer-body hk-body" });
+    ui.drawer.appendChild(body);
+    if (!rows.length) {
+      body.appendChild(el("div", { class: "hk-empty" }, [
+        el("p", { class: "hk-empty-icon", "aria-hidden": "true", text: "🧹" }),
+        el("p", { text: "Click + next to a failing object, or Add all on a rule, to collect clean-up work. Then raise it as one GitHub issue." })]));
+      return;
+    }
+
+    var titleIn = el("input", { type: "text", class: "hk-input", id: "hk-title", value: basketMeta.title || defaultTitle(rows) });
+    titleIn.addEventListener("input", function () { basketMeta.title = titleIn.value; saveBasket(); });
+    var notesIn = el("textarea", { class: "hk-input", id: "hk-notes", rows: "2", placeholder: "Optional: context for whoever picks this up" });
+    notesIn.value = basketMeta.notes || "";
+    notesIn.addEventListener("input", function () { basketMeta.notes = notesIn.value; saveBasket(); });
+    body.appendChild(el("div", { class: "hk-fields" }, [
+      el("label", { for: "hk-title", text: "Issue title" }), titleIn,
+      el("label", { for: "hk-notes", text: "Notes" }), notesIn]));
+
+    var list = el("div", { class: "hk-groups" });
+    var g = group(rows, "rule");
+    Object.keys(g).sort(function (a, b) {
+      return SEV_ORDER[g[a][0].severity] - SEV_ORDER[g[b][0].severity] || ruleText(a).localeCompare(ruleText(b));
+    }).forEach(function (id) {
+      var rule = ruleById[id] || {};
+      list.appendChild(el("section", { class: "hk-group sev-edge-" + rule.severity }, [
+        el("div", { class: "hk-group-head" }, [sevChip(rule.severity), el("strong", { text: ruleText(id) }), el("span", { class: "rpt-count", text: String(g[id].length) })]),
+        rule.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), rule.fix]) : null,
+        el("ul", { class: "hk-items" }, g[id].map(function (r) {
+          return el("li", {}, [objectLink(r), raisedBadge(r),
+            el("button", { type: "button", class: "hk-remove", "aria-label": "Remove " + objectText(r), title: "Remove", text: "×",
+                           onclick: function () { setInBasket([hkKey(r)], false); } })]);
+        }))]));
+    });
+    body.appendChild(list);
+
+    var create = el("button", { type: "button", class: "hk-primary", disabled: model.repo ? null : "" },
+      [el("span", { "aria-hidden": "true", text: "↗ " }), "Create issue on GitHub"]);
+    create.addEventListener("click", createIssue);
+    var copy = el("button", { type: "button", class: "rpt-data-btn", text: "Copy as Markdown", onclick: function () {
+      copyText(itemsMarkdown(basketRows())).then(function () { toast("Copied. Paste it into any GitHub issue or comment."); },
+                                                 function () { toast("Your browser blocked the clipboard."); });
+    } });
+    var clearBtn = el("button", { type: "button", class: "rpt-data-btn hk-clear", text: "Clear list", onclick: function () {
+      if (confirm("Remove all " + plural(basket.length, "item") + " from your housekeeping list?")) setInBasket(basket.slice(), false);
+    } });
+    ui.drawer.appendChild(el("div", { class: "hk-foot" }, [
+      el("p", { class: "hk-how" }, model.repo ? [
+        "Opens a pre-filled ", el("strong", { text: "Housekeeping" }), " issue on GitHub. Press ", el("strong", { text: "Submit" }),
+        " there, then use ", el("strong", { text: "Development → Create a branch" }), " on the issue to start the work."]
+        : ["This site does not know its GitHub repository, so it can't open an issue. Use Copy as Markdown instead."]),
+      el("div", { class: "hk-actions" }, [create, copy, clearBtn])]));
+  }
+
   // ---- render
   function render() {
     syncHeader();
@@ -601,10 +841,20 @@
     root = app.getAttribute("data-root") || "";
     Promise.all(["results", "model"].map(function (n) {
       return fetch(root + "data/" + n + ".json").then(function (r) { if (!r.ok) throw new Error(n + ".json " + r.status); return r.json(); });
-    })).then(function (d) {
-      results = d[0]; model = d[1];
+    }).concat([fetch(root + "data/issues.json").then(function (r) { return r.ok ? r.json() : { issues: [] }; })
+      .catch(function () { return { issues: [] }; })])).then(function (d) {
+      results = d[0]; model = d[1]; issues = d[2] || { issues: [] };
       results.rules.forEach(function (r) { ruleById[r.id] = r; });
-      readState(); buildShell(); render();
+      results.results.forEach(function (r) { if (r.status === "fail") failByKey[hkKey(r)] = r; });
+      (issues.issues || []).forEach(function (i) {
+        if (i.state !== "open") return;
+        (i.items || []).forEach(function (it) {
+          var k = it.table + "|" + it.object + "|" + it.rule;
+          (raised[k] = raised[k] || []).push({ number: i.number, url: i.url, done: it.done });
+        });
+      });
+      loadBasket();
+      readState(); buildShell(); buildHousekeeping(); render();
     }).catch(function (e) {
       clear(app);
       app.appendChild(el("p", { class: "dash-empty", text: "Could not load the rule results: " + e.message }));

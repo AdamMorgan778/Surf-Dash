@@ -5,7 +5,7 @@ import pytest
 
 from tmdl import ROOT
 
-from fetch_issues import form_fields
+from fetch_issues import form_fields, shape
 from parse_model import parse_model
 
 
@@ -81,3 +81,31 @@ def test_issue_form_fields():
     assert fields["request type"] == "Data quality"
     assert fields["priority"] == ""
     assert fields["details"] == "Line one\nLine two"
+
+
+def _issue(body, labels=()):
+    return {"number": 12, "title": "[Housekeeping] 3 fixes", "state": "open", "html_url": "https://github.com/o/r/issues/12",
+            "created_at": "2026-11-13T10:00:00Z", "closed_at": None, "body": body, "labels": [{"name": l} for l in labels]}
+
+
+def test_housekeeping_issue_items_are_read_back():
+    body = ("### Items\n\n**Numeric columns aggregated by a measure are hidden.**\nFix: Hide the column.\n\n"
+            "- [ ] FactSales · Revenue — Numeric columns aggregated by a measure are hidden. (rule: hide-fact-columns)\n"
+            "- [x] FactSales · Quantity — Numeric columns aggregated by a measure are hidden. (rule: hide-fact-columns)\n"
+            "- [ ] Whole model · SurfAnalytics — The model has a date table. (rule: model-has-date-table)\n"
+            "- [ ] a line without a rule marker\n\n### Priority\n\nMedium\n\n### Notes\n\n_No response_")
+    out = shape(_issue(body, ["housekeeping"]))
+    assert out["requestType"] == "Housekeeping" and out["priority"] == "Medium"
+    assert out["items"] == [
+        {"table": "FactSales", "object": "Revenue", "rule": "hide-fact-columns", "done": False},
+        {"table": "FactSales", "object": "Quantity", "rule": "hide-fact-columns", "done": True},
+        {"table": "(model)", "object": "SurfAnalytics", "rule": "model-has-date-table", "done": False}]
+    assert out["progress"] == {"done": 1, "total": 3}
+    assert out["table"] == "Whole model"   # more than one table involved
+
+
+def test_housekeeping_single_table_and_plain_issues():
+    body = "### Items\n\n- [ ] DimBoard · LengthFt — Every visible column has a description. (rule: column-description)"
+    assert shape(_issue(body))["table"] == "DimBoard"
+    plain = shape(_issue("### Table\n\nDimSpot\n\n### Request type\n\nQuestion"))
+    assert "items" not in plain and plain["table"] == "DimSpot" and plain["requestType"] == "Question"

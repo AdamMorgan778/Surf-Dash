@@ -44,6 +44,23 @@ def form_fields(body):
     return fields
 
 
+# A housekeeping item line, as written by the rules report:
+#   - [ ] FactSales · Revenue — Numeric columns aggregated ... (rule: hide-fact-columns)
+_ITEM = re.compile(r"^\s*[-*]\s+\[([ xX])\]\s+(.+?)\s+·\s+(.+?)\s+—.*\(rule:\s*([\w-]+)\)\s*$")
+
+
+def housekeeping_items(text):
+    """[{table, object, rule, done}] for every item line in a housekeeping issue's Items field."""
+    items = []
+    for line in (text or "").splitlines():
+        m = _ITEM.match(line)
+        if m:
+            table = m.group(2).strip()
+            items.append({"table": "(model)" if table == "Whole model" else table, "object": m.group(3).strip(),
+                          "rule": m.group(4), "done": m.group(1).lower() == "x"})
+    return items
+
+
 def shape(issue):
     fields = form_fields(issue.get("body"))
     labels = [l["name"] for l in issue.get("labels", [])]
@@ -51,10 +68,18 @@ def shape(issue):
     for l in labels:
         if l.lower().startswith("table:"):
             table = l.split(":", 1)[1].strip()
-    return {"number": issue["number"], "title": issue["title"], "state": issue["state"], "url": issue["html_url"],
-            "table": table or "Unassigned", "requestType": fields.get("request type", ""),
-            "priority": fields.get("priority", ""), "labels": labels,
-            "created": issue["created_at"][:10], "closed": (issue.get("closed_at") or "")[:10]}
+    out = {"number": issue["number"], "title": issue["title"], "state": issue["state"], "url": issue["html_url"],
+           "table": table or "Unassigned", "requestType": fields.get("request type", ""),
+           "priority": fields.get("priority", ""), "labels": labels,
+           "created": issue["created_at"][:10], "closed": (issue.get("closed_at") or "")[:10]}
+    items = housekeeping_items(fields.get("items", ""))
+    if items or "housekeeping" in (l.lower() for l in labels):
+        tables = sorted({i["table"] for i in items})
+        out.update(items=items, requestType="Housekeeping",
+                   progress={"done": sum(1 for i in items if i["done"]), "total": len(items)})
+        if not table:
+            out["table"] = "Whole model" if len(tables) != 1 or tables[0] == "(model)" else tables[0]
+    return out
 
 
 def fetch(slug):

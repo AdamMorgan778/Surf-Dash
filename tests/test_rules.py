@@ -179,3 +179,9 @@ def test_every_rule_in_rules_json_has_a_check():
     out = run_rules.run(good_model(), rules)
     assert out["failures"] == {"error": 0, "warning": 0, "info": 0}
     assert set(out["results"][0]) == {"object", "type", "table", "rule", "severity", "status", "link", "category"}
+
+
+def test_every_rule_has_a_fix_note():
+    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
+        rules = json.load(f)
+    assert all(r.get("fix", "").strip().endswith(".") for r in rules), [r["id"] for r in rules if not r.get("fix")]

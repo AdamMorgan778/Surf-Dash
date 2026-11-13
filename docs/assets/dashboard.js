@@ -163,7 +163,9 @@
         return i.table === "Unassigned" || i.table === "Whole model" ? !f.table.value && !f.owner.value : tableInScope(i.table);
       });
       dataTable(document.getElementById("issues-table"), ["Issue", "Title", "Table", "Type", "Priority", "State"], list.map(function (i) {
-        return [link("#" + i.number, i.url), i.title, i.table, i.requestType, i.priority, i.state === "open" ? "Open" : "Closed " + i.closed];
+        var state = i.state === "open" ? "Open" : "Closed " + i.closed;
+        if (i.progress && i.progress.total) state += " · " + i.progress.done + "/" + i.progress.total + " done";
+        return [link("#" + i.number, i.url), i.title, i.table, i.requestType, i.priority, state];
       }), issues.repo ? "No open issues, and none closed in the last " + issues.closedDays + " days." : "Issues appear here once the repository is on GitHub.");
     }
 
