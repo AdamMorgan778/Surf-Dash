@@ -12,7 +12,7 @@ body:
     id: items
     attributes:
       label: Items
-      description: One checklist line per fix. Keep the "(rule: ...)" part at the end of each line so the docs site can match it back to the report.
+      description: One checklist line per fix. Keep the "(rule: ...)" part at the end of each line so the docs site can match it back to the report. A description of each item (the rule, what is breaking it, what the rule is and how to fix it) is added automatically after you submit.
     validations:
       required: true
   - type: dropdown

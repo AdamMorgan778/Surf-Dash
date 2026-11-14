@@ -181,6 +181,14 @@ def test_every_rule_in_rules_json_has_a_check():
     assert set(out["results"][0]) == {"object", "type", "table", "rule", "severity", "status", "link", "category"}
 
 
+def test_every_rule_has_a_short_name():
+    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
+        rules = json.load(f)
+    names = [r.get("name", "") for r in rules]
+    assert all(n and len(n) <= 70 and not n.endswith(".") for n in names)
+    assert len(set(names)) == len(names)
+
+
 def test_every_rule_has_a_fix_note():
     with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
         rules = json.load(f)

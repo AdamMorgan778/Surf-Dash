@@ -168,8 +168,8 @@ def rules_page(results):
               sum(counts.get(r["id"], {}).get("pass", 0) for r in rules if r["severity"] == s)]
              for s in ("error", "warning", "info")])]
     for cat in sorted({r.get("category") or "Other" for r in rules}):
-        L += [f"## {cat}", "", table(["Rule", "How to fix", "Severity", "Failing", "Passing", "BPA rule"], [
-            [r["description"], r.get("fix", ""), r["severity"].capitalize(), counts.get(r["id"], {}).get("fail", 0),
+        L += [f"## {cat}", "", table(["Rule", "What it checks", "How to fix", "Severity", "Failing", "Passing", "BPA rule"], [
+            [f"**{r.get('name', r['id'])}**", r["description"], r.get("fix", ""), r["severity"].capitalize(), counts.get(r["id"], {}).get("fail", 0),
              counts.get(r["id"], {}).get("pass", 0), f"`{r['bpaId']}`" if r.get("bpaId") else "Project rule"]
             for r in rules if (r.get("category") or "Other") == cat])]
     return "\n".join(L)

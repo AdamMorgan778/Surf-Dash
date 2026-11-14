@@ -41,7 +41,25 @@ To silence a rule, lower its severity or remove its entry from `rules.json`.
 
 On the Rules report, click **+** next to any failing object (or **Add all** on a rule) to collect clean-up work. The list is kept in your browser until you raise it. **Create issue on GitHub** opens a pre-filled issue from the **Housekeeping** form (`.github/ISSUE_TEMPLATE/housekeeping.yml`); press **Submit**, then use **Development → Create a branch** on the issue to start the work.
 
-Each item is a checklist line ending in `(rule: <id>)`. `tools/fetch_issues.py` reads those lines back, so items in an open housekeeping issue show an **#n** badge in the report, and the Overview's issue list shows progress from the ticked boxes.
+Each item is a short checklist line ending in `(rule: <id>)`, so even long lists fit in GitHub's "new issue" link:
+
+```
+- [ ] FactSales · Revenue — Hide fact table columns (rule: hide-fact-columns)
+```
+
+When the issue is opened, the **Describe housekeeping items** workflow (`.github/workflows/housekeeping-details.yml`, running `tools/expand_housekeeping.py`) adds a description under every item, looked up from the current model:
+
+```
+- [ ] FactSales · Revenue — Hide fact table columns (rule: hide-fact-columns)
+  - **Rule:** Hide fact table columns · Formatting · warning · BPA HIDE_FACT_TABLE_COLUMNS
+  - **Breaking it:** column Revenue in table FactSales (decimal, visible), linked to its TMDL line
+  - **What the rule is:** Numeric columns aggregated by a measure are hidden, so people use the measure.
+  - **How to fix:** Hide the column; people use the measure that aggregates it instead.
+```
+
+It runs once per issue. If an issue is too big for GitHub's body limit, the checklist stays in the issue and the descriptions are posted as comments. Rule names and fix notes come from `name` and `fix` in `rules.json`. To try it locally: `python tools/expand_housekeeping.py --dry-run --event <event.json>`.
+
+`tools/fetch_issues.py` reads the checklist lines back, so items in an open housekeeping issue show a status tag in the report, and the Overview's issue list shows progress from the ticked boxes.
 
 Once an item is in an open housekeeping issue it is locked (no **+** button) and carries a status tag:
 

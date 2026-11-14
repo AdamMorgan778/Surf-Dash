@@ -63,6 +63,7 @@
   function sourceOf(r) { return ruleById[r.rule] && ruleById[r.rule].bpaId ? "bpa" : "project"; }
   function sourceLabel(s) { return s === "bpa" ? "Best Practice Analyzer" : "Project rule"; }
   function ruleText(id) { return ruleById[id] ? ruleById[id].description : id; }
+  function ruleName(id) { return ruleById[id] ? ruleById[id].name || ruleById[id].description : id; }
   function valueLabel(key, v) {
     if (key === "table") return tableLabel(v);
     if (key === "source") return sourceLabel(v);
@@ -446,7 +447,8 @@
           return el("button", { type: "button", class: "expand-btn", "aria-expanded": expanded[r.id] ? "true" : "false",
             "aria-label": (expanded[r.id] ? "Hide" : "Show") + " failing objects for: " + r.text, text: expanded[r.id] ? "▾" : "▸",
             onclick: function () { expanded[r.id] = !expanded[r.id]; render(); } }); } },
-      { key: "text", label: "Rule", cell: function (r) { return r.text; } },
+      { key: "text", label: "Rule", cell: function (r) {
+          return el("span", {}, [el("strong", { class: "rule-name", text: ruleName(r.id) }), el("br"), el("span", { class: "rule-desc", text: r.text })]); } },
       { key: "category", label: "Category", cell: function (r) { return r.category; } },
       { key: "sev", label: "Severity", cell: function (r) { return sevChip(r.severity); } },
       { key: "source", label: "Source", cell: function (r) { return r.bpaId ? el("span", { text: "BPA", title: "Best Practice Analyzer rule " + r.bpaId }) : "Project"; } },
@@ -759,18 +761,15 @@
     var where = tables.slice(0, 3).join(", ") + (tables.length > 3 ? " and " + (tables.length - 3) + " more" : "");
     return "Housekeeping: " + plural(rows.length, "fix") + " across " + where;
   }
+  // One short checklist line per item, so even long lists fit in GitHub's "new issue" link. The
+  // housekeeping-details workflow adds each item's full description (rule, what breaks it, how to fix) after Submit.
   function itemsMarkdown(rows) {
-    var g = group(rows, "rule");
-    return Object.keys(g).sort(function (a, b) {
-      return SEV_ORDER[g[a][0].severity] - SEV_ORDER[g[b][0].severity] || ruleText(a).localeCompare(ruleText(b));
-    }).map(function (id) {
-      var rule = ruleById[id] || {};
-      var head = "**" + ruleText(id) + "** (" + (rule.severity || "") + (rule.bpaId ? ", BPA " + rule.bpaId : "") + ")\n" +
-                 (rule.fix ? "How to fix: " + rule.fix + "\n" : "");
-      return head + "\n" + g[id].map(function (r) {
-        return "- [ ] " + tableLabel(r.table) + " · " + r.object + " — " + ruleText(id) + " (rule: " + id + ")";
-      }).join("\n");
-    }).join("\n\n");
+    return rows.slice().sort(function (a, b) {
+      return SEV_ORDER[a.severity] - SEV_ORDER[b.severity] || ruleName(a.rule).localeCompare(ruleName(b.rule)) ||
+             sortTables(a.table, b.table) || a.object.localeCompare(b.object);
+    }).map(function (r) {
+      return "- [ ] " + tableLabel(r.table) + " · " + r.object + " — " + ruleName(r.rule) + " (rule: " + r.rule + ")";
+    }).join("\n");
   }
   function issueUrl(title, items, notes) {
     var p = new URLSearchParams();
@@ -856,7 +855,8 @@
     }).forEach(function (id) {
       var rule = ruleById[id] || {};
       list.appendChild(el("section", { class: "hk-group sev-edge-" + rule.severity }, [
-        el("div", { class: "hk-group-head" }, [sevChip(rule.severity), el("strong", { text: ruleText(id) }), el("span", { class: "rpt-count", text: String(g[id].length) })]),
+        el("div", { class: "hk-group-head" }, [sevChip(rule.severity), el("strong", { text: ruleName(id) }), el("span", { class: "rpt-count", text: String(g[id].length) })]),
+        el("p", { class: "hk-rule-desc", text: ruleText(id) }),
         rule.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), rule.fix]) : null,
         el("ul", { class: "hk-items" }, g[id].map(function (r) {
           return el("li", {}, [objectLink(r), statusTag(r),
@@ -879,7 +879,8 @@
     ui.drawer.appendChild(el("div", { class: "hk-foot" }, [
       el("p", { class: "hk-how" }, model.repo ? [
         "Opens a pre-filled ", el("strong", { text: "Housekeeping" }), " issue on GitHub. Press ", el("strong", { text: "Submit" }),
-        " there, then use ", el("strong", { text: "Development → Create a branch" }), " on the issue to start the work."]
+        " there. A description of every item (the rule, what is breaking it and how to fix it) is added to the issue automatically. Then use ",
+        el("strong", { text: "Development → Create a branch" }), " on the issue to start the work."]
         : ["This site does not know its GitHub repository, so it can't open an issue. Use Copy as Markdown instead."]),
       el("div", { class: "hk-actions" }, [create, copy, clearBtn])]));
   }

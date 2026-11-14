@@ -70,6 +70,9 @@
 .hk-group.sev-edge-info { border-left-color: var(--sev-info); }
 .hk-group-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.4rem; align-items: baseline; font-size: 0.68rem; }
 .hk-group-head .sev-chip { font-size: 0.6rem; color: var(--md-default-fg-color--light); }
+.hk-rule-desc { margin: 0.15rem 0 0; font-size: 0.62rem; color: var(--md-default-fg-color--light); }
+.rule-name { font-weight: 700; }
+.rule-desc { font-size: 0.6rem; color: var(--md-default-fg-color--light); }
 .hk-items { list-style: none; margin: 0.35rem 0 0; padding: 0; display: grid; gap: 0.15rem; font-size: 0.66rem; }
 .hk-items li { display: flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.3rem; border-radius: 6px; }
 .hk-items li:hover { background: var(--md-code-bg-color); }
