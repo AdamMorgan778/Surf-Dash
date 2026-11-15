@@ -3,8 +3,8 @@ import json
 import os
 import shutil
 
-import yaml
-
+from fetch_issues import match_tables
+from housekeeping import annotate
 from tmdl import BUILD, ROOT
 
 DOCS = os.path.join(ROOT, "docs")
@@ -72,12 +72,16 @@ def table_page(t, model, results, issues):
                                          m["displayFolder"], m["description"] or MISSING] for m in t["measures"]]),
               "### DAX", "", "```dax"]
         L += [f"{m['name']} = {m['expression']}" for m in t["measures"]] + ["```", ""]
+        L += ["### Dependencies", "", "What each measure is built from, and which measures would change if it changed.", "",
+              table(["Measure", "Uses", "Used by"], [
+                  [f"`{m['name']}`", ", ".join(f"`{x}`" for x in m["dependsOn"]["measures"] + m["dependsOn"]["columns"]),
+                   ", ".join(f"`{x}`" for x in m["usedBy"])] for m in t["measures"]])]
     L += ["## Relationships", "", table(["From (many)", "To (one)", "Filter direction", "Active"], [
         [f"[{r['fromTable']}]({r['fromTable']}.md)[{r['fromColumn']}]", f"[{r['toTable']}]({r['toTable']}.md)[{r['toColumn']}]",
          "Both" if r["crossFilter"] == "bothDirections" else "Single", "Yes" if r["isActive"] else "No"] for r in rels])]
     rule_text = {r["id"]: r["description"] for r in results["rules"]}
     order = {"error": 0, "warning": 1, "info": 2}
-    fails = sorted((r for r in results["results"] if r["table"] == t["name"] and r["status"] == "fail"),
+    fails = sorted((r for r in results["results"] if r["table"] == t["name"]),
                    key=lambda r: (order[r["severity"]], r["category"], r["object"]))
     L += ["## Rule failures", "", table(["Object", "Rule", "Category", "Severity"], [
         [f"[`{r['object']}`]({r['link']})" if r["link"] else f"`{r['object']}`", rule_text[r["rule"]],
@@ -150,17 +154,18 @@ BPA_SOURCE = "https://github.com/microsoft/Analysis-Services/tree/master/BestPra
 
 def rules_page(results):
     counts = {}
-    for r in results["results"]:
-        c = counts.setdefault(r["rule"], {"pass": 0, "fail": 0})
-        c[r["status"]] += 1
+    for row in results["counts"]:
+        c = counts.setdefault(row["rule"], {"pass": 0, "fail": 0})
+        c["pass"] += row["pass"]
+        c["fail"] += row["fail"]
     rules = results["rules"]
     L = ["# Rule reference", "",
-         "What each rule checks. For charts and filters, see the [rules dashboard](index.md).", "",
+         "What each rule checks. For charts and filters, see the [rules report](index.md).", "",
          f"The {len(rules)} rules the model is checked against on every build. "
          f"{sum(1 for r in rules if r.get('bpaId'))} of them match a rule in Microsoft's "
          f"[Best Practice Analyzer rule set]({BPA_SOURCE}) (BPA) and carry its ID. The rest are this project's own "
          "documentation and naming rules.", "",
-         "Rules are defined in `rules.json` and the checks are written in Python in `tools/run_rules.py`. "
+         "Rules, their severities and their settings are in `rules.json`; the checks are written in Python in `tools/run_rules.py`. "
          "BPA rules that need Vertipaq statistics or a live model, or that cover features this model does not use "
          "(row-level security, calculation groups, DirectQuery and similar), are not included.", "",
          table(["Severity", "Failing", "Passing"], [
@@ -175,34 +180,47 @@ def rules_page(results):
     return "\n".join(L)
 
 
-def glossary():
-    path = os.path.join(ROOT, "metadata", "glossary.yaml")
-    terms = []
-    if os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
-            terms = yaml.safe_load(f) or []
-    terms.sort(key=lambda t: t["term"].lower())
-    return "\n".join(["# Glossary", "", "Surf and business terms used in the model.", "",
+def glossary(model):
+    terms = sorted(model.get("glossary") or [], key=lambda t: t["term"].lower())
+    return "\n".join(["# Glossary", "", "Business terms used in the model.", "",
                       table(["Term", "Definition", "Where it appears"],
                             [[f"**{t['term']}**", t["definition"], ", ".join(f"`{r}`" for r in t.get("related", []))] for t in terms])])
 
 
+def summary(model, results):
+    """The few facts about the model that the site's pages need. The full model.json stays in build/."""
+    tables = []
+    for t in model["tables"]:
+        objs = [t] + [c for c in t["columns"] if not c["isHidden"]] + t["measures"]
+        tables.append({"name": t["name"], "kind": t["kind"], "owner": t["meta"].get("owner", ""),
+                       "columns": len(t["columns"]), "measures": len(t["measures"]),
+                       "described": sum(1 for o in objs if o["description"]), "total": len(objs)})
+    return {"name": model["name"], "siteName": model["siteName"], "repo": model["repo"], "generated": model["generated"],
+            "score": results["score"], "failures": results["failures"], "tables": tables}
+
+
+def write_json(name, data):
+    os.makedirs(os.path.join(DOCS, "data"), exist_ok=True)
+    with open(os.path.join(DOCS, "data", name), "w", encoding="utf-8") as f:
+        json.dump(data, f, separators=(",", ":"))
+
+
 def main():
     model, results, issues = load("model.json"), load("results.json"), load("issues.json")
+    match_tables(issues["issues"], [t["name"] for t in model["tables"]])
+    annotate(results, issues["issues"])
     shutil.rmtree(os.path.join(DOCS, "dictionary"), ignore_errors=True)
+    shutil.rmtree(os.path.join(DOCS, "data"), ignore_errors=True)
     write(os.path.join(DOCS, "dictionary", "index.md"), dictionary_index(model))
     for t in model["tables"]:
         write(os.path.join(DOCS, "dictionary", f"{t['name']}.md"), table_page(t, model, results, issues))
     write(os.path.join(DOCS, "catalogue.md"), catalogue(model))
     write(os.path.join(DOCS, "bus-matrix.md"), bus_matrix(model))
-    write(os.path.join(DOCS, "glossary.md"), glossary())
-    old = os.path.join(DOCS, "rules.md")  # the rule list moved to rules/reference.md
-    if os.path.exists(old):
-        os.remove(old)
+    write(os.path.join(DOCS, "glossary.md"), glossary(model))
     write(os.path.join(DOCS, "rules", "reference.md"), rules_page(results))
-    os.makedirs(os.path.join(DOCS, "data"), exist_ok=True)
-    for name in ("model.json", "results.json", "issues.json"):
-        shutil.copyfile(os.path.join(BUILD, name), os.path.join(DOCS, "data", name))
+    write_json("summary.json", summary(model, results))
+    write_json("results.json", results)
+    write_json("issues.json", issues)
     print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rule reference")
 
 

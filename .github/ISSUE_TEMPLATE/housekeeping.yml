@@ -6,13 +6,16 @@ body:
   - type: markdown
     attributes:
       value: |
-        These are clean-up fixes to the Surf Analytics model, usually raised from the **Rules report** on the docs site with the housekeeping list.
+        These are clean-up fixes to the semantic model, usually raised from the **Rules report** on the docs site with the housekeeping list.
         To start work, open **Development** in the right-hand sidebar of this issue and choose **Create a branch**. Tick each item as it is done; the report reads the ticks back.
   - type: textarea
     id: items
     attributes:
       label: Items
-      description: One checklist line per fix. Keep the "(rule: ...)" part at the end of each line so the docs site can match it back to the report. A description of each item (the rule, what is breaking it, what the rule is and how to fix it) is added automatically after you submit.
+      description: >-
+        One checklist line per fix. Keep the "(rule: ...)" part at the end of each line so the docs site can match it
+        back to the report. A description of each item (the rule, what is breaking it and how to fix it) is added
+        automatically after you submit.
     validations:
       required: true
   - type: dropdown
@@ -23,6 +26,7 @@ body:
         - High
         - Medium
         - Low
+      default: 1
     validations:
       required: true
   - type: textarea

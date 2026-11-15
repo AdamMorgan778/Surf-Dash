@@ -8,17 +8,22 @@ from datetime import datetime, timezone
 
 import yaml
 
-from tmdl import BUILD, ROOT, blob_link, parse_file, repo_slug, unquote
+from dax import dependencies
+from tmdl import BUILD, ROOT, blob_link, parse_file, repo_slug, settings, unquote
 
 NUMERIC = {"int64", "double", "decimal"}
 
 
 def find_model_dir(root=ROOT):
-    hits = [p for p in glob.glob(os.path.join(root, "**", "*.SemanticModel", "definition"), recursive=True)
-            if os.sep + ".venv" + os.sep not in p]
+    """The model's definition folder: settings.yml `model` if set, otherwise the one *.SemanticModel at the top level."""
+    named = settings(root).get("model")
+    hits = [os.path.join(root, named, "definition")] if named else sorted(glob.glob(os.path.join(root, "*.SemanticModel", "definition")))
+    hits = [h for h in hits if os.path.isdir(h)]
     if not hits:
-        raise SystemExit("No *.SemanticModel/definition folder found")
-    return sorted(hits)[0]
+        raise SystemExit("No *.SemanticModel/definition folder found. Set `model` in settings.yml if it is in a subfolder.")
+    if len(hits) > 1:
+        raise SystemExit("More than one *.SemanticModel folder found. Set `model` in settings.yml to pick one.")
+    return hits[0]
 
 
 def rel(path, root=ROOT):
@@ -31,12 +36,12 @@ def split_ref(ref):
     return unquote(m.group(1)), unquote(m.group(2))
 
 
-def load_meta(root=ROOT):
-    path = os.path.join(root, "metadata", "tables.yaml")
+def load_yaml(root, name, default):
+    path = os.path.join(root, "metadata", name)
     if not os.path.exists(path):
-        return {}
+        return default
     with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+        return yaml.safe_load(f) or default
 
 
 def row_count(root, source):
@@ -52,7 +57,7 @@ def row_count(root, source):
 def parse_model(root=ROOT):
     mdir = find_model_dir(root)
     slug = repo_slug()
-    meta = load_meta(root)
+    meta = load_yaml(root, "tables.yaml", {})
     tables = []
     for path in sorted(glob.glob(os.path.join(mdir, "tables", "*.tmdl"))):
         file = rel(path, root)
@@ -122,9 +127,14 @@ def parse_model(root=ROOT):
         kind = "dimension" if t["name"] in one else "fact" if t["name"] in many else "other"
         t["kind"] = t["meta"].get("kind", kind)
 
-    return {"name": os.path.basename(os.path.dirname(mdir)).replace(".SemanticModel", ""),
+    dependencies(tables)
+    name = os.path.basename(os.path.dirname(mdir)).replace(".SemanticModel", "")
+    return {"name": name, "siteName": settings(root).get("site_name") or f"{name} model docs",
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-            "repo": slug, "tables": tables, "relationships": relationships}
+            "repo": slug, "tables": tables, "relationships": relationships,
+            # business metadata kept beside the model, so the rules can check it against the model
+            "metadataTables": sorted(meta), "metadataLink": blob_link("metadata/tables.yaml", slug=slug),
+            "glossary": load_yaml(root, "glossary.yaml", []), "glossaryLink": blob_link("metadata/glossary.yaml", slug=slug)}
 
 
 def main():
@@ -136,6 +146,7 @@ def main():
           f"{sum(len(t['columns']) for t in model['tables'])} columns, "
           f"{sum(len(t['measures']) for t in model['tables'])} measures, "
           f"{len(model['relationships'])} relationships")
+    return model
 
 
 if __name__ == "__main__":

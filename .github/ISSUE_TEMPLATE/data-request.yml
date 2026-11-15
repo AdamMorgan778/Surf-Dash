@@ -1,25 +1,17 @@
 name: Model request
-description: Ask for a change to the Surf Analytics model, report a data problem or flag missing documentation.
+description: Ask for a change to the semantic model, report a data problem or flag missing documentation.
 title: "[Model] "
 labels: ["model"]
 body:
   - type: markdown
     attributes:
-      value: The answers below are read by the documentation site, so the issue shows up against the right table on the dashboard.
-  - type: dropdown
+      value: The answers below are read by the documentation site, so the issue shows up against the right table on the home page.
+  - type: input
     id: table
     attributes:
       label: Table
-      description: Which table is this about? Keep this list in step with the tables in the model.
-      options:
-        - Whole model
-        - FactSession
-        - FactSales
-        - DimDate
-        - DimSpot
-        - DimSurfer
-        - DimBoard
-        - DimProduct
+      description: The table this is about, spelt as in the data dictionary, or "Whole model". Anything else shows as Unassigned.
+      placeholder: Whole model
     validations:
       required: true
   - type: dropdown

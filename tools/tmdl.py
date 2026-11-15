@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 
+import yaml
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD = os.path.join(ROOT, "build")
 
@@ -15,6 +17,15 @@ def unquote(name):
     if name.startswith("'") and name.endswith("'"):
         return name[1:-1].replace("''", "'")
     return name
+
+
+def settings(root=ROOT):
+    """The project's settings.yml as a dict; empty when the file is missing. Every key is optional."""
+    path = os.path.join(root, "settings.yml")
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 
 def repo_slug():

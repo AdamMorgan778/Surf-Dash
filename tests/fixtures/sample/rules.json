@@ -1,0 +1,63 @@
+[
+  {
+    "id": "hide-fact-columns",
+    "name": "Hide fact table columns",
+    "check": "hide_fact_columns",
+    "category": "Formatting",
+    "severity": "warning",
+    "bpaId": "HIDE_FACT_TABLE_COLUMNS",
+    "description": "Numeric columns aggregated by a measure are hidden, so people use the measure.",
+    "fix": "Hide the column; people use the measure that aggregates it instead."
+  },
+  {
+    "id": "measure-description",
+    "name": "Measures have descriptions",
+    "check": "measure_description",
+    "category": "Maintenance",
+    "severity": "error",
+    "bpaId": "",
+    "description": "Every measure has a description.",
+    "fix": "Add a /// description line above the measure."
+  },
+  {
+    "id": "table-has-relationship",
+    "name": "Ensure tables have relationships",
+    "check": "table_has_relationship",
+    "category": "Maintenance",
+    "severity": "info",
+    "bpaId": "ENSURE_TABLES_HAVE_RELATIONSHIPS",
+    "description": "Every table has at least one relationship.",
+    "fix": "Relate the table to the model."
+  },
+  {
+    "id": "no-bidirectional",
+    "name": "Check bi-directional relationships",
+    "check": "no_bidirectional",
+    "category": "Performance",
+    "severity": "warning",
+    "bpaId": "",
+    "description": "Relationships filter in one direction only.",
+    "fix": "Set the relationship to filter in one direction."
+  },
+  {
+    "id": "model-has-date-table",
+    "name": "Model should have a date table",
+    "check": "model_has_date_table",
+    "category": "Performance",
+    "severity": "warning",
+    "bpaId": "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+    "description": "The model has a table marked as a date table.",
+    "fix": "Add a date table."
+  },
+  {
+    "id": "switched-off",
+    "name": "A rule that is switched off",
+    "check": "table_description",
+    "category": "Maintenance",
+    "severity": "error",
+    "enabled": false,
+    "bpaId": "",
+    "description": "Off.",
+    "fix": "Nothing."
+  }
+]

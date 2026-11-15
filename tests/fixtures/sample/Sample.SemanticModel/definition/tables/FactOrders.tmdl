@@ -1,0 +1,58 @@
+/// Order lines. One row per order.
+table FactOrders
+
+	/// Sum of order amounts.
+	measure 'Total Amount' = SUM(FactOrders[Amount])
+		formatString: \$#,0
+		displayFolder: Sales
+
+	measure 'Order Count' = COUNTROWS(FactOrders)
+		formatString: #,0
+
+	/// Total amount for the same period one year earlier.
+	measure 'Amount LY' = CALCULATE([Total Amount], SAMEPERIODLASTYEAR(DimDate[Date]))
+		formatString: \$#,0
+		displayFolder: Time Intelligence
+
+	/// Average amount per order.
+	measure 'Avg Amount' =
+			DIVIDE(
+			    [Total Amount],
+			    [Order Count]
+			)
+		formatString: \$#,0.00
+
+	/// Joins to DimDate.
+	column DateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: DateKey
+
+	/// Joins to DimCustomer.
+	column CustomerKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CustomerKey
+
+	/// Order amount in US dollars.
+	column Amount
+		dataType: decimal
+		summarizeBy: sum
+		sourceColumn: Amount
+
+	/// Units ordered.
+	column Quantity
+		dataType: int64
+		summarizeBy: sum
+		sourceColumn: Quantity
+
+	partition FactOrders = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "FactOrders.csv")),
+				    Typed = Table.TransformColumnTypes(Source, {})
+				in
+				    Typed

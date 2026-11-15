@@ -1,7 +1,9 @@
 """Apply rules.json to build/model.json and write build/results.json.
 
 Each rule in rules.json names a `check`: a function in this file that takes the model and returns one row per
-object in the rule's scope, with status pass or fail. Most of the checks below `# ---- Best Practice Analyzer`
+object in the rule's scope, with status pass or fail. A rule's optional `params` are passed to its check as keyword
+arguments, and `"enabled": false` switches a rule off. results.json holds the failing rows and, for every rule and
+table, how many checks passed and failed. Most of the checks below `# ---- Best Practice Analyzer`
 are Python ports of rules in Microsoft's standard Tabular Editor BPA rule set; their BPA IDs are in rules.json.
 They read only what the TMDL files hold, so BPA rules that need Vertipaq statistics or a live model are not here.
 """
@@ -9,12 +11,14 @@ import json
 import os
 import re
 
+from dax import clean as _dax, refs as _refs
+from housekeeping import MODEL_TABLE
 from tmdl import BUILD, ROOT
 
 NUMERIC = {"int64", "double", "decimal"}
 SMALL_WORDS = {"in", "per", "of", "vs", "and", "the", "to", "by", "on", "at", "for"}
-PASCAL = re.compile(r"^[A-Z][A-Za-z0-9]*$")
-MODEL_TABLE = "(model)"  # table value for rows about the model as a whole
+PASCAL = r"^[A-Z][A-Za-z0-9]*$"
+DIM_FACT = r"^(Dim|Fact)[A-Z][A-Za-z0-9]*$"
 
 
 def _row(obj, typ, table, ok, link):
@@ -64,29 +68,28 @@ def fk_hidden(model):
     return [_row(c["name"], "column", t["name"], c["isHidden"], c["link"]) for t, c in _columns(model) if c["isForeignKey"]]
 
 
-def table_naming(model):
-    return [_row(t["name"], "table", t["name"], bool(re.match(r"^(Dim|Fact)[A-Z][A-Za-z0-9]*$", t["name"])), t["link"])
-            for t in model["tables"]]
+def table_naming(model, pattern=DIM_FACT):
+    return [_row(t["name"], "table", t["name"], bool(re.match(pattern, t["name"])), t["link"]) for t in model["tables"]]
 
 
-def column_naming(model):
-    return [_row(c["name"], "column", t["name"], bool(PASCAL.match(c["name"])), c["link"]) for t, c in _columns(model)]
+def column_naming(model, pattern=PASCAL):
+    return [_row(c["name"], "column", t["name"], bool(re.match(pattern, c["name"])), c["link"]) for t, c in _columns(model)]
 
 
-def _title_case(name):
+def _title_case(name, small_words=SMALL_WORDS):
     words = name.split(" ")
     if not name or "" in words:
         return False
     for i, w in enumerate(words):
-        if w == "%" or re.match(r"^\(.+\)$", w) or (i > 0 and w in SMALL_WORDS):
+        if w == "%" or re.match(r"^\(.+\)$", w) or (i > 0 and w in small_words):
             continue
         if not re.match(r"^[A-Z0-9][A-Za-z0-9]*$", w):
             return False
     return True
 
 
-def measure_naming(model):
-    return [_row(m["name"], "measure", t["name"], _title_case(m["name"]), m["link"]) for t, m in _measures(model)]
+def measure_naming(model, small_words=SMALL_WORDS):
+    return [_row(m["name"], "measure", t["name"], _title_case(m["name"], set(small_words)), m["link"]) for t, m in _measures(model)]
 
 
 def column_table_prefix(model):
@@ -100,8 +103,46 @@ def no_bidirectional(model):
 
 
 def implicit_measure(model):
+    # Columns a measure already aggregates are left to hide_fact_columns, so one problem is one failure.
+    aggregated = _aggregated_columns(model)
     return [_row(c["name"], "column", t["name"], c["summarizeBy"] in ("none", ""), c["link"])
-            for t, c in _columns(model, True) if t["kind"] == "fact" and c["dataType"] in NUMERIC]
+            for t, c in _columns(model, True)
+            if t["kind"] == "fact" and c["dataType"] in NUMERIC and (t["name"].lower(), c["name"].lower()) not in aggregated]
+
+
+def table_metadata(model, required=("owner", "grain")):
+    return [_row(t["name"], "table", t["name"], all((t.get("meta") or {}).get(k) for k in required),
+                 model.get("metadataLink", "")) for t in model["tables"]]
+
+
+def _plain(text):
+    return re.sub(r"[^a-z0-9]", "", (text or "").lower())
+
+
+def description_quality(model, min_words=2):
+    """A description that is there, but only repeats the name or is too short to say anything."""
+    rows = []
+    for typ, table, o in _objects(model):
+        if typ == "partition" or not o.get("description") or (typ == "column" and o["isHidden"]):
+            continue
+        d = o["description"]
+        rows.append(_row(o["name"], typ, table, _plain(d) != _plain(o["name"]) and len(d.split()) >= min_words, o["link"]))
+    return rows
+
+
+def metadata_references(model):
+    """metadata/tables.yaml and the glossary only name things that are in the model."""
+    tables = {t["name"]: t for t in model["tables"]}
+    measures = {m["name"] for _, m in _measures(model)}
+    rows = [_row(name, "metadata", name if name in tables else MODEL_TABLE, name in tables, model.get("metadataLink", ""))
+            for name in model.get("metadataTables", [])]
+    for term in model.get("glossary", []):
+        for ref in term.get("related") or []:
+            table, _, field = str(ref).partition(".")
+            t = tables.get(table)
+            ok = ref in measures or (t is not None and (not field or any(o["name"] == field for o in t["columns"] + t["measures"])))
+            rows.append(_row(f"{term['term']}: {ref}", "glossary", MODEL_TABLE, ok, model.get("glossaryLink", "")))
+    return rows
 
 
 # ---- shared helpers for the BPA ports
@@ -125,27 +166,6 @@ def _objects(model):
             yield "measure", t["name"], m
         for p in t.get("partitions", []):
             yield "partition", t["name"], p
-
-
-def _dax(expr):
-    """DAX with string literals and comments removed, so text inside them is not mistaken for code."""
-    expr = re.sub(r'"(?:[^"]|"")*"', '""', expr or "")
-    expr = re.sub(r"/\*.*?\*/", " ", expr, flags=re.S)
-    return re.sub(r"(//|--)[^\n]*", " ", expr)
-
-
-_REF = re.compile(r"('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)?\[((?:[^\]]|\]\])+)\]")
-
-
-def _refs(expr):
-    """[(table or None, name)] for every bracketed reference in a DAX expression."""
-    out = []
-    for m in _REF.finditer(_dax(expr)):
-        table = m.group(1)
-        if table and table.startswith("'"):
-            table = table[1:-1].replace("''", "'")
-        out.append((table, m.group(2).replace("]]", "]")))
-    return out
 
 
 def _names(model):
@@ -333,11 +353,11 @@ def no_snowflake(model):
             for t in model["tables"]]
 
 
-def limit_bidirectional(model):
+def limit_bidirectional(model, max_share=0.3):
     rels = model["relationships"]
     risky = sum(1 for r in rels if r["crossFilter"] == "bothDirections"
                 or (r.get("fromCardinality") == "many" and r.get("toCardinality") == "many"))
-    return [_model_row(model, not rels or risky / len(rels) <= 0.3)]
+    return [_model_row(model, not rels or risky / len(rels) <= max_share)]
 
 
 _HEAVY_M = re.compile(r"Table\.(Join|NestedJoin|Group|Sort|Pivot)\b|Value\.NativeQuery|Odbc\.Query|OleDb\.Query|\[\s*Query\s*=")
@@ -373,11 +393,17 @@ _AGG = re.compile(r"\b(SUM|AVERAGE|MIN|MAX|COUNT|COUNTA|DISTINCTCOUNT|MEDIAN)\s*
                   r"('(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)\[((?:[^\]]|\]\])+)\]", re.I)
 
 
-def hide_fact_columns(model):
+def _aggregated_columns(model):
+    """(table, column) pairs, lower case, that a measure aggregates directly, as in SUM(Table[Column])."""
     aggregated = set()
     for _, m in _measures(model):
         for _, table, name in _AGG.findall(_dax(m["expression"])):
             aggregated.add((table.strip("'").replace("''", "'").lower(), name.replace("]]", "]").lower()))
+    return aggregated
+
+
+def hide_fact_columns(model):
+    aggregated = _aggregated_columns(model)
     return [_row(c["name"], "column", t["name"], (t["name"].lower(), c["name"].lower()) not in aggregated, c["link"])
             for t, c in _columns(model, True) if c["dataType"] in NUMERIC]
 
@@ -385,13 +411,13 @@ def hide_fact_columns(model):
 PERCENT_FORMAT = "#,0.0%;-#,0.0%;#,0.0%"
 
 
-def percentage_format(model):
-    return [_row(m["name"], "measure", t["name"], m["formatString"] == PERCENT_FORMAT, m["link"])
+def percentage_format(model, format=PERCENT_FORMAT):
+    return [_row(m["name"], "measure", t["name"], m["formatString"] == format, m["link"])
             for t, m in _measures(model) if "%" in m["formatString"]]
 
 
-def integer_format(model):
-    return [_row(m["name"], "measure", t["name"], m["formatString"] in ("#,0", "#,0.0"), m["link"])
+def integer_format(model, formats=("#,0", "#,0.0")):
+    return [_row(m["name"], "measure", t["name"], m["formatString"] in formats, m["link"])
             for t, m in _measures(model)
             if m["formatString"] and "$" not in m["formatString"] and "%" not in m["formatString"]]
 
@@ -422,7 +448,7 @@ CHECKS = {f.__name__: f for f in (
     trim_names, special_characters, first_letter_capital, partition_name,
     no_floating_point, model_has_date_table, no_auto_date_tables, no_snowflake, limit_bidirectional, minimize_power_query,
     relationship_integer, mark_primary_keys, hide_fact_columns, percentage_format, integer_format, data_category,
-    month_sorted)}
+    month_sorted, table_metadata, description_quality, metadata_references)}
 
 
 def documentation_score(model):
@@ -432,25 +458,33 @@ def documentation_score(model):
 
 
 def run(model, rules):
-    results = []
+    """Apply the enabled rules. Returns the failing rows, plus pass and fail counts for every rule and table."""
+    rules = [r for r in rules if r.get("enabled", True)]
+    results, counts = [], {}
     for rule in rules:
-        for row in CHECKS[rule["check"]](model):
-            results.append({**row, "rule": rule["id"], "severity": rule["severity"], "category": rule.get("category", "")})
-    fails = {s: sum(1 for r in results if r["status"] == "fail" and r["severity"] == s) for s in ("error", "warning", "info")}
-    return {"generated": model.get("generated", ""), "score": documentation_score(model), "failures": fails,
-            "rules": rules, "results": results}
+        for row in CHECKS[rule["check"]](model, **(rule.get("params") or {})):
+            c = counts.setdefault((rule["id"], row["table"]), {"rule": rule["id"], "table": row["table"], "pass": 0, "fail": 0})
+            c[row["status"]] += 1
+            if row["status"] == "fail":
+                results.append({**row, "rule": rule["id"], "severity": rule["severity"], "category": rule.get("category", "")})
+    fails = {s: sum(1 for r in results if r["severity"] == s) for s in ("error", "warning", "info")}
+    return {"generated": model.get("generated", ""), "repo": model.get("repo"), "score": documentation_score(model),
+            "failures": fails, "rules": rules, "counts": list(counts.values()), "results": results}
+
+
+def load_rules(root=ROOT):
+    with open(os.path.join(root, "rules.json"), encoding="utf-8") as f:
+        return json.load(f)
 
 
 def main():
     with open(os.path.join(BUILD, "model.json"), encoding="utf-8") as f:
         model = json.load(f)
-    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
-        rules = json.load(f)
-    out = run(model, rules)
+    out = run(model, load_rules())
     with open(os.path.join(BUILD, "results.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, indent=2)
     s, fl = out["score"], out["failures"]
-    print(f"results.json: {len(rules)} rules, score {s['pct']}% ({s['described']}/{s['total']}), "
+    print(f"results.json: {len(out['rules'])} rules, score {s['pct']}% ({s['described']}/{s['total']}), "
           f"failures: {fl['error']} error, {fl['warning']} warning, {fl['info']} info")
 
 

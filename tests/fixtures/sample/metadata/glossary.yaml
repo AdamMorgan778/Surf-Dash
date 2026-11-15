@@ -1,0 +1,3 @@
+- term: Amount
+  definition: Value of an order in US dollars.
+  related: [FactOrders.Amount, Total Amount, FactOrders.Missing]

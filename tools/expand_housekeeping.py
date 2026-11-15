@@ -26,9 +26,9 @@ import os
 import sys
 import urllib.request
 
-from fetch_issues import _ITEM
+import run_rules
+from housekeeping import MODEL_LABEL, MODEL_TABLE, parse_item
 from parse_model import parse_model
-from run_rules import run
 from tmdl import ROOT, repo_slug
 
 MARKER = "<!-- housekeeping-details -->"
@@ -37,13 +37,15 @@ COMMENT_LIMIT = 60000
 COMMENT_NOTE = "_Descriptions for each item are in the comments below, because they are too long for the issue itself._"
 
 
-def load_rules():
-    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
-        return {r["id"]: r for r in json.load(f)}
+LABEL = "housekeeping"
+
+
+def load_rules(root=ROOT):
+    return {r["id"]: r for r in run_rules.load_rules(root)}
 
 
 def lookup_tables(model, results):
-    rows = {(r["table"], r["object"], r["rule"]): r for r in results["results"]}
+    rows = {(r["table"], r["object"], r["rule"]): r for r in results["results"]}   # failing checks only
     tables = {t["name"]: t for t in model["tables"]}
     return rows, tables
 
@@ -70,6 +72,10 @@ def breaking_text(row, tables):
         return f"relationship {_named(obj, link)}"
     if row["type"] == "partition":
         return f"partition {_named(obj, link)} of table {table}"
+    if row["type"] == "metadata":
+        return f"entry {_named(obj, link)} in metadata/tables.yaml"
+    if row["type"] == "glossary":
+        return f"glossary reference {_named(obj, link)}"
     return "the whole model"
 
 
@@ -88,24 +94,15 @@ def detail_lines(item, rows, tables, rules, indent="  "):
     if row:
         out.append(f"- **Breaking it:** {breaking_text(row, tables)}")
     else:
-        where = "the whole model" if item["table"] == "(model)" else f"`{item['object']}` in table {item['table']}"
+        where = "the whole model" if item["table"] == MODEL_TABLE else f"`{item['object']}` in table {item['table']}"
         out.append(f"- **Breaking it:** {where}")
     if rule:
         out.append(f"- **What the rule is:** {rule['description']}")
         if rule.get("fix"):
             out.append(f"- **How to fix:** {rule['fix']}")
-    if not row or row["status"] != "fail":
+    if not row:
         out.append("- **Status:** No longer failing in the current model. Check it and tick it off.")
     return [indent + line for line in out]
-
-
-def parse_item(line):
-    m = _ITEM.match(line)
-    if not m:
-        return None
-    table = m.group(2).strip()
-    return {"table": "(model)" if table == "Whole model" else table, "object": m.group(3).strip(), "rule": m.group(4),
-            "done": m.group(1).lower() == "x"}
 
 
 def expand(body, model, results, rules):
@@ -137,8 +134,8 @@ def expand(body, model, results, rules):
         bullet = "- " + line.split("]", 1)[1].strip()
         sections.setdefault(item["table"], []).append("\n".join([bullet] + ["  " + d.lstrip() for d in details]))
     comments, current = [], ""
-    for table in sorted(sections, key=lambda t: (t == "(model)", t)):
-        block = f"#### {'Whole model' if table == '(model)' else table}\n\n" + "\n".join(sections[table]) + "\n\n"
+    for table in sorted(sections, key=lambda t: (t == MODEL_TABLE, t)):
+        block = f"#### {MODEL_LABEL if table == MODEL_TABLE else table}\n\n" + "\n".join(sections[table]) + "\n\n"
         while block:
             room = COMMENT_LIMIT - len(current)
             if len(block) <= room:
@@ -180,7 +177,7 @@ def main(argv=None):
         issue = json.load(f)["issue"]
     rules = load_rules()
     model = parse_model()
-    results = run(model, list(rules.values()))
+    results = run_rules.run(model, list(rules.values()))
     result = expand(issue.get("body") or "", model, results, rules)
     if not result:
         print(f"Issue #{issue['number']}: nothing to expand (no item lines, or descriptions already added).")
@@ -195,6 +192,8 @@ def main(argv=None):
     _api("PATCH", base, {"body": result["body"]})
     for c in result["comments"]:
         _api("POST", base + "/comments", {"body": c})
+    # Adding a label through the API creates it if the repository does not have it yet, so there is no manual setup.
+    _api("POST", base + "/labels", {"labels": [LABEL]})
     print(f"Issue #{issue['number']}: descriptions added" + (f" in {len(result['comments'])} comment(s)." if result["comments"] else "."))
 
 

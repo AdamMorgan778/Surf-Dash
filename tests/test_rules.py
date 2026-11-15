@@ -1,30 +1,32 @@
-"""Each rule against a small hand-built model that passes everything, then with one thing broken."""
+"""Each check against a small hand-built model that passes everything, then with one thing broken.
+
+The last tests look at this project's rules.json, but only at its shape, never at its wording or which rules are on."""
 import copy
-import json
-import os
 
 import pytest
 
 import run_rules
-from tmdl import ROOT
+
+DESC = "A proper description."
 
 
 def col(name, **kw):
-    base = {"name": name, "description": "d", "link": "", "formatString": "", "dataType": "string", "isHidden": False,
+    base = {"name": name, "description": DESC, "link": "", "formatString": "", "dataType": "string", "isHidden": False,
             "isKey": False, "sortByColumn": "", "summarizeBy": "none", "dataCategory": "", "isForeignKey": False,
             "isPrimaryKey": False, "sourceColumn": name, "expression": "", "isCalculated": False, "isAvailableInMdx": True}
     return {**base, **kw}
 
 
 def measure(name, expr, fmt):
-    return {"name": name, "description": "d", "link": "", "formatString": fmt, "expression": expr, "isHidden": False,
+    return {"name": name, "description": DESC, "link": "", "formatString": fmt, "expression": expr, "isHidden": False,
             "displayFolder": ""}
 
 
 def table(name, kind, columns, measures=(), **kw):
     part = {"name": name, "kind": "m", "mode": "import", "line": 1, "link": "",
             "source": f'let Source = Csv.Document(File.Contents("{name}.csv")) in Source'}
-    return {"name": name, "kind": kind, "description": "d", "link": "", "dataCategory": "", "isCalculated": False,
+    return {"name": name, "kind": kind, "description": DESC, "link": "", "dataCategory": "", "isCalculated": False,
+            "meta": {"owner": "Someone", "grain": "One row per thing"},
             "columns": list(columns), "measures": list(measures), "partitions": [part], **kw}
 
 
@@ -36,7 +38,8 @@ def rel(ft, fc, tt, tc):
 
 def good_model():
     return {
-        "name": "Test",
+        "name": "Test", "metadataTables": ["DimDate", "FactSales"],
+        "glossary": [{"term": "Revenue", "definition": "Money in.", "related": ["FactSales.Revenue", "Total Revenue", "DimSpot"]}],
         "tables": [
             table("DimDate", "dimension", [
                 col("DateKey", dataType="int64", isHidden=True, isPrimaryKey=True),
@@ -124,6 +127,9 @@ BREAK = {
     "integer_format": lambda m: ms(m, "Sales Lines").update(formatString="0"),
     "data_category": lambda m: c(m, "DimSpot", "Country").update(dataCategory=""),
     "month_sorted": lambda m: c(m, "DimDate", "MonthName").update(sortByColumn=""),
+    "table_metadata": lambda m: t(m, "DimSpot")["meta"].pop("grain"),
+    "description_quality": lambda m: c(m, "FactSales", "Channel").update(description="Channel."),
+    "metadata_references": lambda m: m["glossary"][0]["related"].append("FactSales.Gone"),
 }
 
 
@@ -170,26 +176,66 @@ def test_userelationship_activates_inactive_relationship():
     assert all(r["status"] == "pass" for r in run_rules.inactive_relationship_used(model))
 
 
-def test_every_rule_in_rules_json_has_a_check():
-    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
-        rules = json.load(f)
-    assert {r["check"] for r in rules} == set(run_rules.CHECKS)
+def test_one_problem_is_one_failure():
+    """A visible fact column that a measure aggregates fails hide_fact_columns only, not implicit_measure as well."""
+    model = good_model()
+    c(model, "FactSales", "Revenue").update(isHidden=False, summarizeBy="sum")
+    assert [r["object"] for r in run_rules.hide_fact_columns(model) if r["status"] == "fail"] == ["Revenue"]
+    assert all(r["object"] != "Revenue" for r in run_rules.implicit_measure(model))
+
+
+def test_params_change_what_a_check_accepts():
+    model = good_model()
+    assert any(r["status"] == "fail" for r in run_rules.table_naming(model, pattern="^tbl_"))
+    t(model, "DimSpot")["meta"] = {"owner": "Someone"}
+    assert all(r["status"] == "pass" for r in run_rules.table_metadata(model, required=["owner"]))
+    ms(model, "Sales Lines")["name"] = "Sales with Lines"
+    assert any(r["status"] == "fail" for r in run_rules.measure_naming(model))
+    assert all(r["status"] == "pass" for r in run_rules.measure_naming(model, small_words=["with"]))
+
+
+def test_metadata_references_name_the_stale_entries():
+    model = good_model()
+    model["metadataTables"].append("DimOld")
+    model["glossary"][0]["related"] += ["Not A Measure", "DimSpot.Nope"]
+    fails = [r["object"] for r in run_rules.metadata_references(model) if r["status"] == "fail"]
+    assert fails == ["DimOld", "Revenue: Not A Measure", "Revenue: DimSpot.Nope"]
+
+
+RULE = {"id": "table-description", "name": "n", "check": "table_description", "category": "Maintenance", "severity": "error"}
+
+
+def test_run_keeps_failing_rows_and_counts_the_rest():
+    model = good_model()
+    t(model, "DimSpot")["description"] = ""
+    off = {**RULE, "id": "off", "check": "column_description", "enabled": False}
+    out = run_rules.run(model, [RULE, off, {**RULE, "id": "named", "check": "table_naming", "params": {"pattern": "^Dim"}}])
+    assert [r["id"] for r in out["rules"]] == ["table-description", "named"]          # switched-off rules are left out
+    assert [(r["table"], r["rule"]) for r in out["results"]] == [("DimSpot", "table-description"), ("FactSales", "named")]
+    assert set(out["results"][0]) == {"object", "type", "table", "rule", "severity", "status", "link", "category"}
+    assert {"rule": "table-description", "table": "DimDate", "pass": 1, "fail": 0} in out["counts"]
+    assert {"rule": "table-description", "table": "DimSpot", "pass": 0, "fail": 1} in out["counts"]
+    assert out["failures"] == {"error": 2, "warning": 0, "info": 0}
+
+
+def test_good_model_passes_every_check():
+    rules = [{**RULE, "id": name, "check": name} for name in run_rules.CHECKS]
+    out = run_rules.run(good_model(), rules)
+    assert out["results"] == [] and sum(c["pass"] for c in out["counts"]) > 100
+
+
+# ---- this project's rules.json: shape only
+
+def test_rules_json_is_well_formed():
+    rules = run_rules.load_rules()
+    assert {r["check"] for r in rules} <= set(run_rules.CHECKS), "a rule names a check that is not in run_rules.CHECKS"
     assert len({r["id"] for r in rules}) == len(rules)
     assert all(r["category"] and r["severity"] in ("error", "warning", "info") for r in rules)
-    out = run_rules.run(good_model(), rules)
-    assert out["failures"] == {"error": 0, "warning": 0, "info": 0}
-    assert set(out["results"][0]) == {"object", "type", "table", "rule", "severity", "status", "link", "category"}
-
-
-def test_every_rule_has_a_short_name():
-    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
-        rules = json.load(f)
+    assert all(isinstance(r.get("enabled", True), bool) and isinstance(r.get("params", {}), dict) for r in rules)
     names = [r.get("name", "") for r in rules]
-    assert all(n and len(n) <= 70 and not n.endswith(".") for n in names)
-    assert len(set(names)) == len(names)
+    assert all(n and len(n) <= 70 and not n.endswith(".") for n in names) and len(set(names)) == len(names)
+    assert all(r.get("description", "").strip() and r.get("fix", "").strip().endswith(".") for r in rules)
 
 
-def test_every_rule_has_a_fix_note():
-    with open(os.path.join(ROOT, "rules.json"), encoding="utf-8") as f:
-        rules = json.load(f)
-    assert all(r.get("fix", "").strip().endswith(".") for r in rules), [r["id"] for r in rules if not r.get("fix")]
+def test_rules_json_params_are_accepted_by_their_checks():
+    run_rules.run(good_model(), run_rules.load_rules())   # a misspelt param name raises TypeError here
