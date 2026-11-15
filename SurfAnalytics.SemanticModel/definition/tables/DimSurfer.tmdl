@@ -2,6 +2,16 @@
 table DimSurfer
 	lineageTag: 0db06936-8846-4ac3-99e8-3cee91b8a9ba
 
+	/// Number of surfers on the register, whether or not they have logged a session.
+	measure 'Total Surfers' = COUNTROWS(DimSurfer)
+		formatString: #,0
+		displayFolder: Surfers
+
+	/// Average number of sessions logged by each surfer who logged at least one.
+	measure 'Sessions per Surfer' = DIVIDE([Total Sessions], [Active Surfers])
+		formatString: #,0.0
+		displayFolder: Surfers
+
 	/// Surrogate key for the surfer.
 	column SurferKey
 		dataType: int64

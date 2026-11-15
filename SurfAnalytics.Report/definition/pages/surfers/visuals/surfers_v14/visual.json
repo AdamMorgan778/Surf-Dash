@@ -1,0 +1,169 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.4.0/schema.json",
+  "name": "surfers_v14",
+  "position": {
+    "x": 648,
+    "y": 464,
+    "z": 14000,
+    "width": 608,
+    "height": 240,
+    "tabOrder": 14000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "DimSurfer"
+                    }
+                  },
+                  "Property": "SurferName"
+                }
+              },
+              "queryRef": "DimSurfer.SurferName",
+              "nativeQueryRef": "SurferName"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "DimSurfer"
+                    }
+                  },
+                  "Property": "SkillLevel"
+                }
+              },
+              "queryRef": "DimSurfer.SkillLevel",
+              "nativeQueryRef": "SkillLevel"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "DimSurfer"
+                    }
+                  },
+                  "Property": "HomeCountry"
+                }
+              },
+              "queryRef": "DimSurfer.HomeCountry",
+              "nativeQueryRef": "HomeCountry"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "DimSurfer"
+                    }
+                  },
+                  "Property": "Membership"
+                }
+              },
+              "queryRef": "DimSurfer.Membership",
+              "nativeQueryRef": "Membership"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Total Sessions"
+                }
+              },
+              "queryRef": "FactSession.Total Sessions",
+              "nativeQueryRef": "Total Sessions"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSession"
+                    }
+                  },
+                  "Property": "Waves Caught"
+                }
+              },
+              "queryRef": "FactSession.Waves Caught",
+              "nativeQueryRef": "Waves Caught"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "FactSales"
+                    }
+                  },
+                  "Property": "Total Revenue"
+                }
+              },
+              "queryRef": "FactSales.Total Revenue",
+              "nativeQueryRef": "Total Revenue"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Surfer Activity'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#0B3954'"
+                    }
+                  }
+                }
+              }
+            },
+            "bold": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "12D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
