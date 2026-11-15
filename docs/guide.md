@@ -6,7 +6,8 @@ This site is generated from the Power BI semantic model in the repository. It is
 
 | Page | Use it to |
 | --- | --- |
-| [Overview](index.md) | See the headline numbers and which issues are open. |
+| [Home](index.md) | Scroll through the barrel for the headline numbers, each linking to its page. |
+| [Overview](overview.md) | See the headline numbers and which issues are open. |
 | [Work in progress](work.md) | See which tables, columns, measures and report pages someone is already changing, before you start on them. |
 | [Documentation](documentation/index.md) | See what the documentation is missing: descriptions, catalogue fields and broken glossary references. |
 | [Data dictionary](documentation/dictionary/index.md) | Look up a column or measure: its type, format, description and DAX. Each table has its own page, which also shows what every measure depends on. |
@@ -21,14 +22,13 @@ A field marked *Missing* has no description in the model yet. The footer of ever
 
 ## The Best practice report
 
-The report has four tabs that share one set of filters:
+The report has three tabs that share one set of filters:
 
 - **Summary** shows the headline numbers and charts: the most-failed rules, failures by table, housekeeping status and pass rate by category.
-- **By table** shows a matrix of failures by table and category, and the failing objects for whatever is selected.
 - **By rule** lists every rule the model breaks, most serious first, with what it checks, how to fix it and the objects failing it.
 - **All failures** lists every failing check in one table that you can sort, search and download.
 
-Click a tile, a bar or a matrix cell to filter every tab; click it again to clear. **Show data** on a chart opens the rows behind it. The filters are part of the page address, so you can bookmark or share a view.
+Click a tile or a bar to filter every tab; click it again to clear. **Show data** on a chart opens the rows behind it. The filters are part of the page address, so you can bookmark or share a view.
 
 Rules have three severities. **Error** means something is wrong and should be fixed before the change is merged. **Warning** means bad practice. **Info** is a suggestion.
 

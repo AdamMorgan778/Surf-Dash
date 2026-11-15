@@ -1,4 +1,4 @@
-// Best practice report (/rules/): four tabs (Summary, By table, By rule, All failures) over docs/data/results.json that share one set of
+// Best practice report (/rules/): three tabs (Summary, By rule, All failures) over docs/data/results.json that share one set of
 // filters. Filters and the active tab live in the page address (?view=rules&category=Formatting), so views can be
 // bookmarked and the back button moves between tabs. results.json holds the failing checks, plus pass and fail
 // counts per rule and table for the pass rates. Shared parts come from ui.js; the housekeeping list is housekeeping.js.
@@ -6,10 +6,9 @@
   var M = window.ModelDocs, el = M.el, clear = M.clear, cap = M.cap, uniq = M.uniq, plural = M.plural;
   var SEVS = M.SEVS, SEV_ORDER = M.SEV_ORDER, tableLabel = M.tableLabel, sevChip = M.sevChip;
 
-  var VIEWS = [{ id: "summary", label: "Summary" }, { id: "table", label: "By table" }, { id: "rule", label: "By rule" },
-               { id: "failures", label: "All failures" }];
+  var VIEWS = [{ id: "summary", label: "Summary" }, { id: "rule", label: "By rule" }, { id: "failures", label: "All failures" }];
   // addresses from earlier versions of the report keep working
-  var OLD_VIEWS = { overview: "summary", matrix: "table", rules: "rule", tables: "rule", results: "failures" };
+  var OLD_VIEWS = { overview: "summary", matrix: "summary", table: "summary", rules: "rule", tables: "rule", results: "failures" };
   var FILTERS = ["category", "severity", "table", "work", "rule"];
   var STATE_KEYS = FILTERS.concat(["q"]);   // q only searches the Results table
   var LABEL = { category: "Category", severity: "Severity", table: "Table", work: "Fix status", rule: "Rule", q: "Search" };
@@ -150,7 +149,7 @@
     clear(ui.chips);
     var active = FILTERS.filter(function (k) { return state[k]; });
     if (!active.length) {
-      ui.chips.appendChild(el("span", { class: "rpt-hint", text: "Click any bar, tile or matrix cell to filter every page. Click it again to clear." }));
+      ui.chips.appendChild(el("span", { class: "rpt-hint", text: "Click any bar or tile to filter every tab. Click it again to clear." }));
     }
     active.forEach(function (k) {
       ui.chips.appendChild(el("button", { type: "button", class: "rules-chip", title: "Remove this filter", onclick: function () { setFilter(k, ""); } },
@@ -228,79 +227,9 @@
     }), { max: 100, track: true, empty: "No checks match the filters." });
   }
 
-  // Table x category matrix of failing checks. Ignores the table and category filters so the whole grid stays visible.
-  function matrixRows() { return fails(["table", "category"]); }
-  function matrix(host) {
-    clear(host);
-    var list = matrixRows();
-    var cats = uniq(results.rules.map(function (r) { return r.category; })).sort();
-    var tables = uniq(results.counts.map(function (c) { return c.table; })).sort(sortTables);
-    var cell = {}, rowTot = {}, colTot = {}, max = 1;
-    list.forEach(function (r) {
-      var k = r.table + "|" + r.category;
-      var c = cell[k] = cell[k] || { error: 0, warning: 0, info: 0, total: 0 };
-      c[r.severity]++; c.total++;
-      rowTot[r.table] = (rowTot[r.table] || 0) + 1; colTot[r.category] = (colTot[r.category] || 0) + 1;
-      if (c.total > max) max = c.total;
-    });
-    function head(text, fn, active, dim) {
-      return el("button", { type: "button", class: "grid-head" + (active ? " is-active" : "") + (dim ? " is-dim" : ""), text: text, onclick: fn });
-    }
-    var rowOn = state.table && !state.category, colOn = state.category && !state.table;
-    var thead = el("thead", {}, [el("tr", {}, [el("th", { class: "corner", scope: "col", text: "Table" })].concat(cats.map(function (c) {
-      return el("th", { scope: "col" }, [head(c, function () { delete state.table; toggle("category", c); }, colOn && state.category === c, state.category && state.category !== c)]);
-    })).concat([el("th", { scope: "col", class: "num", text: "Total" })]))]);
-    var tbody = el("tbody");
-    tables.forEach(function (t) {
-      var tr = el("tr", {}, [el("th", { scope: "row" }, [head(tableLabel(t), function () { delete state.category; toggle("table", t); }, rowOn && state.table === t, state.table && state.table !== t)])]);
-      cats.forEach(function (c) {
-        var v = cell[t + "|" + c], dim = (state.table && state.table !== t) || (state.category && state.category !== c);
-        if (!v) { tr.appendChild(el("td", { class: "grid-zero" + (dim ? " is-dim" : ""), text: "·" })); return; }
-        var active = state.table === t && state.category === c;
-        tr.appendChild(el("td", {}, [el("button", {
-          type: "button", class: "grid-cell" + (active ? " is-active" : "") + (dim ? " is-dim" : ""),
-          style: "background:color-mix(in srgb, var(--dash-bar) " + Math.round(12 + 48 * v.total / max) + "%, transparent)",
-          title: tableLabel(t) + ", " + c + ": " + v.total + " failing (" + sevSummary(v) + ")", text: String(v.total),
-          "aria-pressed": active ? "true" : "false",
-          onclick: function () {
-            if (active) { delete state.table; delete state.category; } else { state.table = t; state.category = c; }
-            commit(false);
-          } })]));
-      });
-      tr.appendChild(el("td", { class: "grid-total num", text: String(rowTot[t] || 0) }));
-      tbody.appendChild(tr);
-    });
-    var foot = el("tfoot", {}, [el("tr", {}, [el("th", { scope: "row", text: "Total" })].concat(cats.map(function (c) {
-      return el("td", { class: "grid-total", text: String(colTot[c] || 0) });
-    })).concat([el("td", { class: "grid-total num", text: String(list.length) })]))]);
-    host.appendChild(el("div", { class: "rpt-matrix-wrap" }, [el("table", { class: "rpt-matrix" }, [thead, tbody, foot])]));
-  }
-
   function failItems(list) {
     return el("ul", { class: "fail-list hk-list" }, list.map(function (r) { return el("li", {}, [hk.addButton(r), objectLink(r), hk.statusTag(r)]); }));
   }
-  // Failing objects for the current selection, grouped by rule.
-  function details(host) {
-    clear(host);
-    var list = fails(), c = sevCounts(list);
-    var sel = ["table", "category", "rule"].filter(function (k) { return state[k]; }).map(function (k) { return valueLabel(k, state[k]); });
-    host.appendChild(el("p", { class: "rpt-details-title" }, [
-      el("strong", { text: sel.length ? sel.join(" · ") : "Everything in scope" }), el("br"),
-      plural(c.total, "failing check") + (c.total ? " (" + sevSummary(c) + ")" : "")]));
-    if (!sel.length) host.appendChild(el("p", { class: "rpt-hint", text: "Select a cell, row or column in the matrix, or a rule below, to narrow this list." }));
-    if (!list.length) { host.appendChild(el("p", { class: "dash-empty", text: "Nothing failing here." })); return; }
-    var g = group(list, "rule");
-    Object.keys(g).sort(function (a, b) {
-      return SEV_ORDER[g[a][0].severity] - SEV_ORDER[g[b][0].severity] || g[b].length - g[a].length || ruleName(a).localeCompare(ruleName(b));
-    }).forEach(function (id) {
-      host.appendChild(el("div", { class: "rpt-details-group" }, [
-        el("div", { class: "rpt-details-rule", title: ruleText(id) }, [sevChip(g[id][0].severity), el("span", { text: ruleName(id) }),
-          el("span", { class: "rpt-count", text: String(g[id].length) })]),
-        el("div", { class: "rpt-details-actions" }, [hk.addAllButton(g[id])]),
-        failItems(g[id])]));
-    });
-  }
-
   // ---- pages
   function tableBars(host) {
     var g = group(fails(["table"]), "table");
@@ -317,16 +246,10 @@
     kpis();
     ruleBars(visual("Most-failed rules", { span: 6, sub: "Click a rule to filter every tab. By rule lists them all, with how to fix each one.",
                                            data: function () { return fails(["rule"]); } }), 8);
-    tableBars(visual("Failures by table", { span: 6, sub: "Click a table to filter. By table shows them against each category.",
+    tableBars(visual("Failures by table", { span: 6, sub: "Click a table to filter every tab.",
                                             data: function () { return fails(["table"]); } }));
     workBars(visual("Housekeeping status", { span: 6, sub: "Where the failing checks stand. Click a bar to filter.", data: function () { return fails(["work"]); } }));
     passRate(visual("Pass rate by category", { span: 6, sub: "Share of checks that pass. Click a category to filter." }));
-  }
-
-  function pageTable() {
-    matrix(visual("Failures by table and category", { span: 7, cls: "rpt-tall", data: matrixRows,
-      sub: "Click a cell to select that table and category, or a heading to select a whole row or column. Hover a cell for its severity split." }));
-    details(visual("Failing objects", { span: 5, cls: "rpt-details", sub: "Click + to add an item to your housekeeping list.", data: function () { return fails(); } }));
   }
 
   // Every failing rule as one long list, most serious first, each with what it checks, how to fix it and its objects.
@@ -469,7 +392,7 @@
   function render() {
     syncHeader();
     clear(ui.canvas);
-    ({ summary: pageSummary, table: pageTable, rule: pageRule, failures: pageResults })[view]();
+    ({ summary: pageSummary, rule: pageRule, failures: pageResults })[view]();
   }
 
   M.ready(function () {

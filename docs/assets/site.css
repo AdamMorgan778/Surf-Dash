@@ -6,7 +6,6 @@
   --sev-warning: #fab219;
   --sev-info: #7d8a94;
 }
-[data-md-color-scheme="slate"] { --dash-bar: #4fb3c4; }
 
 .doc-filter {
   font: inherit; font-size: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 6px; min-width: 9rem;
@@ -17,16 +16,16 @@
 .dash-note { font-size: 0.65rem; color: var(--md-default-fg-color--light); margin: 0.2rem 0 0.8rem; }
 .dash-empty { font-size: 0.7rem; color: var(--md-default-fg-color--light); }
 
-.dash-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.6rem; }
-.dash-tile { border: 1px solid var(--md-default-fg-color--lightest); border-radius: 8px; padding: 0.7rem 0.8rem; }
+.dash-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.9rem; }
+.dash-tile { border-radius: 14px; padding: 0.85rem 1rem; background: var(--md-default-bg-color); box-shadow: var(--card-shadow); }
 .tile-label { font-size: 0.65rem; color: var(--md-default-fg-color--light); }
-.tile-value { font-size: 1.6rem; font-weight: 600; line-height: 1.3; color: var(--md-default-fg-color); }
+.tile-value { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; color: var(--md-default-fg-color); }
 .tile-sub { font-size: 0.62rem; color: var(--md-default-fg-color--light); }
 
 .bar-row { display: grid; grid-template-columns: 6.5rem 1fr auto; align-items: center; gap: 0.5rem; font-size: 0.68rem; padding: 0.18rem 0; }
 .bar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-track { height: 0.6rem; }
-.bar-fill { height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--dash-bar); }
+.bar-fill { height: 100%; min-width: 2px; border-radius: 0 6px 6px 0; background: var(--dash-bar); }
 .bar-value { min-width: 1.5rem; text-align: right; font-variant-numeric: tabular-nums; color: var(--md-default-fg-color); }
 .bar-row:hover .bar-fill { filter: brightness(1.15); }
 
@@ -39,48 +38,66 @@
 .bar-icon.sev-info { color: var(--sev-info); }
 .sev-chip { white-space: nowrap; }
 
-/* ---- Sidebar. The left navigation sits on a soft tinted panel so it reads as separate from the page.
-   Tints are mixed from the theme's primary colour. They are defined on body, not :root, because Material sets
-   the teal primary colour on body; at :root it would still be the default indigo. */
+/* ---- Clean coastal look: deep ocean navy, sea-glass teal, sand. Set on body, where Material reads its colours. */
 body {
-  --sb-bg: color-mix(in srgb, var(--md-primary-fg-color) 8%, var(--md-default-bg-color));
-  --sb-edge: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
-  --sb-hover: color-mix(in srgb, var(--md-primary-fg-color) 12%, transparent);
-  --sb-active: color-mix(in srgb, var(--md-primary-fg-color) 20%, transparent);
-  --sb-title: color-mix(in srgb, var(--md-primary-fg-color) 80%, var(--md-default-fg-color));
+  --ocean: #0b3954; --ocean-deep: #082c41; --seaglass: #087e8b; --foam: #3fb8af; --sand: #f2c57c;
+  --card-shadow: 0 1px 2px rgba(11, 57, 84, 0.06), 0 6px 18px rgba(11, 57, 84, 0.07);
+  --md-primary-fg-color: var(--ocean); --md-primary-fg-color--light: #14506f; --md-primary-fg-color--dark: var(--ocean-deep);
+  --md-primary-bg-color: #ffffff; --md-primary-bg-color--light: rgba(255, 255, 255, 0.75);
+  --md-accent-fg-color: var(--seaglass); --md-accent-fg-color--transparent: rgba(8, 126, 139, 0.1);
+  --md-typeset-a-color: var(--seaglass);
+  --md-footer-bg-color: var(--ocean); --md-footer-bg-color--dark: var(--ocean-deep);
+  --dash-bar: #1f8a99;
 }
-[data-md-color-scheme="slate"] {
-  --sb-bg: color-mix(in srgb, var(--md-primary-fg-color) 14%, var(--md-default-bg-color));
-  --sb-edge: color-mix(in srgb, var(--md-primary-fg-color) 35%, transparent);
-  --sb-hover: color-mix(in srgb, var(--md-primary-fg-color) 22%, transparent);
-  --sb-active: color-mix(in srgb, var(--md-primary-fg-color) 34%, transparent);
-  --sb-title: color-mix(in srgb, var(--md-accent-fg-color) 85%, var(--md-default-fg-color));
+body[data-md-color-scheme="slate"] {
+  --md-hue: 203;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.25);
+  --md-primary-fg-color: var(--ocean-deep); --md-primary-fg-color--light: var(--ocean); --md-primary-fg-color--dark: #061f2e;
+  --md-accent-fg-color: var(--foam); --md-accent-fg-color--transparent: rgba(63, 184, 175, 0.12);
+  --md-typeset-a-color: #62cfc6;
+  --md-footer-bg-color: var(--ocean-deep); --md-footer-bg-color--dark: #061f2e;
+  --dash-bar: #4fb3c4;
 }
 
+/* a line of small waves under the header and along the top of the footer */
+.md-header { box-shadow: none; }
+.md-header::after, .md-footer::before { content: ""; display: block; height: 9px; background-repeat: repeat-x; background-size: 54px 9px; pointer-events: none; }
+.md-header::after { position: absolute; left: 0; right: 0; top: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 0h54v3c-9 0-9 6-18 6s-9-6-18-6S9 9 0 9z' fill='%230b3954'/%3E%3C/svg%3E"); }
+.md-footer { position: relative; }
+.md-footer::before { margin-top: -8px; transform: translateY(-1px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 9h54V6c-9 0-9-6-18-6S27 6 18 6 9 0 0 0z' fill='%230b3954'/%3E%3C/svg%3E"); }
+[data-md-color-scheme="slate"] .md-header::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 0h54v3c-9 0-9 6-18 6s-9-6-18-6S9 9 0 9z' fill='%23082c41'/%3E%3C/svg%3E"); }
+[data-md-color-scheme="slate"] .md-footer::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 9h54V6c-9 0-9-6-18-6S27 6 18 6 9 0 0 0z' fill='%23082c41'/%3E%3C/svg%3E"); }
+.md-main__inner { margin-top: 2rem; }
+
+/* type: tighter, heavier headings in ocean navy */
+.md-typeset h1 { font-weight: 700; letter-spacing: -0.02em; color: var(--ocean); margin-bottom: 0.6em; }
+.md-typeset h2 { font-weight: 700; letter-spacing: -0.01em; }
+.md-typeset h3 { font-weight: 700; }
+[data-md-color-scheme="slate"] .md-typeset h1 { color: #d9eef2; }
+
+/* ---- Sidebar: plain, with the current page marked by a sea-glass bar */
 @media screen and (min-width: 76.25em) {
-  /* Material sizes the scroll wrapper to the visible height, so it is the element to paint. */
-  .md-sidebar--primary .md-sidebar__scrollwrap {
-    background: var(--sb-bg);
-    border: 1px solid var(--sb-edge);
-    border-radius: 14px;
-    padding: 0.5rem 0.35rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  }
-  .md-sidebar--primary .md-nav__title {
-    background: transparent; box-shadow: none;
-    font-size: 0.6rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--sb-title);
-  }
-  .md-sidebar--primary a.md-nav__link { border-radius: 7px; padding: 0.3rem 0.55rem; margin-top: 0.12rem; transition: background 0.15s; }
-  .md-sidebar--primary a.md-nav__link:hover { background: var(--sb-hover); }
-  .md-sidebar--primary a.md-nav__link--active { background: var(--sb-active); font-weight: 700; }
-  .md-sidebar--primary label.md-nav__link { padding-left: 0.55rem; }
+  .md-sidebar--primary .md-nav__title { background: transparent; box-shadow: none;
+    font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--md-default-fg-color--light); }
+  .md-sidebar--primary a.md-nav__link, .md-sidebar--primary label.md-nav__link { border-radius: 0 8px 8px 0; padding: 0.32rem 0.6rem; margin-top: 0.1rem;
+    border-left: 3px solid transparent; transition: background 0.15s, border-color 0.15s; }
+  .md-sidebar--primary a.md-nav__link:hover { background: var(--md-accent-fg-color--transparent); }
+  .md-sidebar--primary a.md-nav__link--active { border-left-color: var(--md-accent-fg-color); background: var(--md-accent-fg-color--transparent);
+    color: var(--md-accent-fg-color); font-weight: 700; }
 }
+
+/* tables in the text: lighter lines, no heavy frame */
+.md-typeset table:not([class]) { border: 0; border-radius: 12px; box-shadow: var(--card-shadow); font-size: 0.7rem; }
+.md-typeset table:not([class]) th { font-weight: 700; color: var(--md-default-fg-color--light); }
+.md-typeset table:not([class]) td { border-top-color: var(--md-default-fg-color--lightest); }
 
 /* home page: the same visuals as the report, one column */
 .home-canvas { margin-top: 0.8rem; }
 
 /* Generated tables that scroll in place, with the header kept in view (Data dictionary) */
-.doc-scroll .md-typeset__scrollwrap { max-height: 22rem; overflow: auto; margin: 0 0 1rem; border: 1px solid var(--md-default-fg-color--lightest); border-radius: 6px; }
+.doc-scroll .md-typeset__scrollwrap { max-height: 22rem; overflow: auto; margin: 0 0 1rem; border-radius: 12px; box-shadow: var(--card-shadow); }
 .doc-scroll.doc-scroll-tall .md-typeset__scrollwrap { max-height: 34rem; }
 .doc-scroll .md-typeset__table { margin: 0; }
 .md-typeset .doc-scroll table:not([class]) { border: 0; box-shadow: none; }
