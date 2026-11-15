@@ -31,6 +31,7 @@ theme:
 extra_css:
   - assets/site.css
   - assets/report.css
+  - assets/jetski.css
 extra_javascript:
   - assets/ui.js
   - assets/home.js
@@ -38,6 +39,7 @@ extra_javascript:
   - assets/work.js
   - assets/housekeeping.js
   - assets/rules.js
+  - assets/jetski.js
 
 markdown_extensions:
   - tables

@@ -36,6 +36,8 @@ jobs:
         run: python -m pytest tests -q
       - name: Check the scripts parse
         run: for f in docs/assets/*.js; do node --check "$f"; done
+      - name: Test the jetski game's physics
+        run: node tests/jetski.test.js
       - name: Build the site (not deployed)
         run: python tools/build.py
         env:
