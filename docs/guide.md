@@ -15,6 +15,7 @@ This site is generated from the Power BI semantic model in the repository. It is
 | [Glossary](documentation/glossary.md) | Check what a business term means and where it appears in the model. |
 | [Rules report](rules/index.md) | See which rules the model breaks, filter them, and raise clean-up work. |
 | [Rule reference](rules/reference.md) | Read what each rule checks and how to fix a failure. |
+| [Play](play/index.md) | Race a jetski over sine-wave waves. Your score is multiplied by the documentation coverage. |
 
 A field marked *Missing* has no description in the model yet.
 

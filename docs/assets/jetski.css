@@ -1,0 +1,25 @@
+/* Jetski game (jetski.js) */
+.jetski-stage { position: relative; max-width: 960px; }
+.jetski-canvas { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; touch-action: none;
+  background: #9fd3f0; box-shadow: 0 2px 10px rgba(11, 57, 84, 0.18); }
+.jetski-canvas:focus-visible { outline: 3px solid var(--md-accent-fg-color); outline-offset: 2px; }
+
+/* the result, over the canvas (HTML, so it can hold a link and be read aloud) */
+.jetski-finish { position: absolute; left: 50%; top: 26%; transform: translateX(-50%); width: min(30rem, 92%); box-sizing: border-box;
+  padding: 0.9rem 1.2rem; text-align: center; font-size: 0.8rem; line-height: 1.5; color: #0b3954;
+  background: rgba(255, 255, 255, 0.94); border-radius: 14px; box-shadow: 0 8px 28px rgba(11, 57, 84, 0.3); }
+.jetski-finish[hidden] { display: none; }
+.jetski-finish > strong { display: block; font-size: 1.25rem; }
+.jetski-finish .jetski-sum { font-size: 0.95rem; margin: 0.15rem 0 0.3rem; }
+.jetski-finish a { display: inline-block; margin-top: 0.3rem; font-weight: 600; }
+
+/* on-screen buttons, only where the main input is touch */
+.jetski-touch { display: none; max-width: 960px; justify-content: space-between; gap: 0.6rem; margin-top: 0.6rem; }
+.jetski-touch > div { display: flex; gap: 0.5rem; }
+@media (pointer: coarse) { .jetski-touch { display: flex; } }
+.jetski-btn { font: inherit; font-size: 0.8rem; font-weight: 700; min-width: 3.4rem; min-height: 3.4rem; padding: 0 1rem; cursor: pointer;
+  color: #0b3954; background: #d6e8f7; border: 2px solid #087e8b; border-radius: 14px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.jetski-btn.is-down, .jetski-btn:active { color: #fff; background: #087e8b; }
+[data-md-color-scheme="slate"] .jetski-btn { color: #d6e8f7; background: #12384f; border-color: #3fb8af; }
+[data-md-color-scheme="slate"] .jetski-btn.is-down, [data-md-color-scheme="slate"] .jetski-btn:active { color: #0b2b2b; background: #3fb8af; }
+.jetski-help { max-width: 960px; }
