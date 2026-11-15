@@ -1,0 +1,8 @@
+relationship r1
+	fromColumn: FactOrders.DateKey
+	toColumn: DimDate.DateKey
+
+relationship r2
+	crossFilteringBehavior: bothDirections
+	fromColumn: FactOrders.CustomerKey
+	toColumn: DimCustomer.CustomerKey

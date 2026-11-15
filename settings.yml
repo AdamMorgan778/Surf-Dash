@@ -1,0 +1,11 @@
+# Project settings for the docs site. Every key is optional; delete a line to get the default.
+
+# Shown in the site header. Default: "<model name> model docs".
+site_name: Surf Analytics model docs
+
+# Folder of the semantic model, relative to this file. Only needed when the repository holds more than one
+# *.SemanticModel folder, or the model is in a subfolder. Default: the one *.SemanticModel folder at the top level.
+# model: SurfAnalytics.SemanticModel
+
+# How long a closed issue stays on the home page, in days. Default: 30.
+closed_issue_days: 30

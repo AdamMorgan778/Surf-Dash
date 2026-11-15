@@ -1,0 +1,39 @@
+/// Calendar with one row per day.
+table DimDate
+	dataCategory: Time
+
+	/// Key in yyyymmdd form.
+	column DateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: DateKey
+
+	/// Calendar date.
+	column Date
+		dataType: dateTime
+		isKey
+		summarizeBy: none
+		sourceColumn: Date
+
+	/// Name of the month.
+	column MonthName
+		dataType: string
+		sortByColumn: MonthNum
+		summarizeBy: none
+		sourceColumn: MonthName
+
+	column MonthNum
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: MonthNum
+
+	partition DimDate = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimDate.csv")),
+				    Typed = Table.TransformColumnTypes(Source, {})
+				in
+				    Typed

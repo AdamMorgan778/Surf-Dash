@@ -1,17 +1,7 @@
-"""expand_housekeeping against the real model in this repo."""
-import pytest
-
-from expand_housekeeping import BODY_LIMIT, COMMENT_LIMIT, MARKER, expand, load_rules
+"""expand_housekeeping against the fixture project in tests/fixtures/sample."""
+from expand_housekeeping import BODY_LIMIT, COMMENT_LIMIT, MARKER, expand
 from fetch_issues import shape
-from parse_model import parse_model
-from run_rules import run
-
-
-@pytest.fixture(scope="module")
-def ctx():
-    rules = load_rules()
-    model = parse_model()
-    return model, run(model, list(rules.values())), rules
+from housekeeping import item_line
 
 
 def body_with(lines):
@@ -19,55 +9,58 @@ def body_with(lines):
 
 
 ITEMS = [
-    "- [ ] FactSales · Revenue — Hide fact table columns (rule: hide-fact-columns)",
-    "- [x] FactSales · Total Discounts — Measures have descriptions (rule: measure-description)",
-    "- [ ] DimSpot · DimSpot — Ensure tables have relationships (rule: table-has-relationship)",
-    "- [ ] FactSales · FactSales[DateKey] to DimDate[DateKey] — Check bi-directional relationships (rule: no-bidirectional)",
-    "- [ ] Whole model · SurfAnalytics — Model should have a date table (rule: model-has-date-table)",
+    "- [ ] FactOrders · Amount — Hide fact table columns (rule: hide-fact-columns)",                       # failing
+    "- [x] FactOrders · Order Count — Measures have descriptions (rule: measure-description)",            # failing
+    "- [ ] DimCustomer · DimCustomer — Ensure tables have relationships (rule: table-has-relationship)",  # passes
+    "- [ ] FactOrders · FactOrders[CustomerKey] to DimCustomer[CustomerKey] — Check bi-directional relationships (rule: no-bidirectional)",
+    "- [ ] Whole model · Sample — Model should have a date table (rule: model-has-date-table)",           # passes
 ]
 
 
-def test_expands_each_item_with_rule_object_and_description(ctx):
-    out = expand(body_with(ITEMS[:2]), *ctx)
+def test_expands_each_item_with_rule_object_and_description(sample):
+    out = expand(body_with(ITEMS[:2]), *sample)
     body = out["body"]
     assert out["comments"] == [] and body.startswith(MARKER)
     assert "  - **Rule:** Hide fact table columns · Formatting · warning · BPA HIDE_FACT_TABLE_COLUMNS" in body
-    assert "  - **Breaking it:** column [Revenue](" in body and "in table FactSales (decimal, visible)" in body
+    assert "  - **Breaking it:** column [Amount](https://github.com/o/r/blob/main/" in body
+    assert "in table FactOrders (decimal, visible)" in body
     assert "  - **What the rule is:** Numeric columns aggregated by a measure are hidden, so people use the measure." in body
     assert "  - **How to fix:** Hide the column" in body
-    assert "  - **Breaking it:** measure [Total Discounts](" in body
+    assert "  - **Breaking it:** measure [Order Count](" in body
     # ticks and the other fields are untouched
-    assert "- [x] FactSales · Total Discounts" in body
+    assert "- [x] FactOrders · Order Count" in body
     assert "### Notes\n\nPlease do these before the release." in body
 
 
-def test_still_reads_back_as_the_same_items(ctx):
+def test_still_reads_back_as_the_same_items(sample):
     before = shape(_issue(body_with(ITEMS)))["items"]
-    after = shape(_issue(expand(body_with(ITEMS), *ctx)["body"]))["items"]
+    after = shape(_issue(expand(body_with(ITEMS), *sample)["body"]))["items"]
     assert after == before and len(after) == 5 and after[1]["done"] is True
 
 
-def test_object_wording_by_type_and_items_that_now_pass(ctx):
-    body = expand(body_with(ITEMS), *ctx)["body"]
-    assert "**Breaking it:** relationship [FactSales[DateKey] to DimDate[DateKey]](" in body
+def test_object_wording_by_type_and_items_that_now_pass(sample):
+    body = expand(body_with(ITEMS), *sample)["body"]
+    assert "**Breaking it:** relationship [FactOrders[CustomerKey] to DimCustomer[CustomerKey]](" in body
     assert "**Breaking it:** the whole model" in body
-    assert "**Breaking it:** table [DimSpot](" in body
-    # these three pass in the current model, so they are flagged rather than described as failing
-    assert body.count("No longer failing in the current model") == 3
+    assert "**Breaking it:** `DimCustomer` in table DimCustomer" in body
+    assert body.count("No longer failing in the current model") == 2
 
 
-def test_runs_once(ctx):
-    once = expand(body_with(ITEMS[:1]), *ctx)["body"]
-    assert expand(once, *ctx) is None
-    assert expand("### Items\n\nNothing to see here", *ctx) is None
+def test_unknown_and_switched_off_rules_are_said_to_be_gone(sample):
+    body = expand(body_with(["- [ ] DimDate · DimDate — Old rule (rule: switched-off)"]), *sample)["body"]
+    assert "**Rule:** `switched-off` (not in rules.json any more)" in body
 
 
-def test_huge_lists_go_to_comments(ctx):
-    model, results, rules = ctx
-    fails = [r for r in results["results"] if r["status"] == "fail"]
-    lines = [f"- [ ] {'Whole model' if r['table'] == '(model)' else r['table']} · {r['object']} — {rules[r['rule']]['name']} (rule: {r['rule']})"
-             for r in fails] * 10   # 430 items
-    out = expand(body_with(lines), *ctx)
+def test_runs_once(sample):
+    once = expand(body_with(ITEMS[:1]), *sample)["body"]
+    assert expand(once, *sample) is None
+    assert expand("### Items\n\nNothing to see here", *sample) is None
+
+
+def test_huge_lists_go_to_comments(sample):
+    _, results, rules = sample
+    lines = [item_line(r, rules[r["rule"]]["name"]) for r in results["results"]] * 150
+    out = expand(body_with(lines), *sample)
     assert len(out["body"]) <= BODY_LIMIT + 200 and "comments below" in out["body"]
     assert out["comments"] and all(len(c) <= COMMENT_LIMIT + 100 for c in out["comments"])
     assert sum(c.count("**What the rule is:**") for c in out["comments"]) == len(lines)

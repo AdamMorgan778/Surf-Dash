@@ -15,11 +15,11 @@ from tmdl import ROOT, repo_slug
 
 
 def main():
-    parse_model.main()
+    model = parse_model.main()
     run_rules.main()
     fetch_issues.main()
     generate_docs.main()
-    env = dict(os.environ)
+    env = dict(os.environ, SITE_NAME=model["siteName"])
     slug = repo_slug()
     if slug:
         env["REPO_URL"] = f"https://github.com/{slug}"

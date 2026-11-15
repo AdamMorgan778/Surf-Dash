@@ -1,4 +1,4 @@
-site_name: Surf Analytics model docs
+site_name: !ENV [SITE_NAME, "Model docs"]
 site_description: Data dictionary, data catalogue and bus matrix generated from the Power BI semantic model.
 repo_url: !ENV REPO_URL
 edit_uri: ""
@@ -26,18 +26,15 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
-not_in_nav: |
-  /rules/breakdown.md
-
 # No nav section: MkDocs builds it from the files, so new table pages appear without editing this file.
 
 extra_css:
-  - assets/dashboard.css
-  - assets/report.css
   - assets/site.css
-  - assets/housekeeping.css
+  - assets/report.css
 extra_javascript:
-  - assets/dashboard.js
+  - assets/ui.js
+  - assets/home.js
+  - assets/housekeeping.js
   - assets/rules.js
 
 markdown_extensions:

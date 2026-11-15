@@ -1,0 +1,11 @@
+FactOrders:
+  business_process: Orders
+  grain: One row per order
+  owner: Sales
+DimDate:
+  grain: One row per day
+  owner: Data Team
+DimCustomer:
+  owner: Sales
+DimOld:
+  owner: Nobody

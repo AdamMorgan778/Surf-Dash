@@ -1,0 +1,30 @@
+/// One row per customer.
+table DimCustomer
+
+	/// Surrogate key.
+	column CustomerKey
+		dataType: int64
+		isHidden
+		isKey
+		summarizeBy: none
+		sourceColumn: CustomerKey
+
+	/// Full name of the customer.
+	column Name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Name
+
+	column Country
+		dataType: string
+		summarizeBy: none
+		sourceColumn: Country
+
+	partition DimCustomer = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(File.Contents(DataFolder & "DimCustomer.csv")),
+				    Typed = Table.TransformColumnTypes(Source, {})
+				in
+				    Typed
