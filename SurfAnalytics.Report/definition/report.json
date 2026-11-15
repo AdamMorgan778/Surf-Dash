@@ -55,6 +55,11 @@
           "name": "SurfTheme.json",
           "path": "SurfTheme.json",
           "type": "CustomTheme"
+        },
+        {
+          "name": "WaveBackground.png",
+          "path": "WaveBackground.png",
+          "type": "Image"
         }
       ]
     }

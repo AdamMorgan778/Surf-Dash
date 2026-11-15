@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;overflow:hidden;background:#EEF5FB}svg{display:block}</style></head>
+<body>
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EFF6FC"/><stop offset="1" stop-color="#DCEBF7"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3FB8AF" stop-opacity="0.05"/><stop offset="1" stop-color="#087E8B" stop-opacity="0.11"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#sky)"/>
+
+  <!-- swells, back to front -->
+  <path d="M0 455 C 180 420, 330 470, 520 440 S 860 400, 1040 445 S 1220 430, 1280 440 L1280 720 L0 720Z" fill="#3FB8AF" fill-opacity="0.05"/>
+  <path d="M0 520 C 160 495, 320 540, 500 512 S 820 470, 1000 515 S 1200 500, 1280 505 L1280 720 L0 720Z" fill="#087E8B" fill-opacity="0.055"/>
+
+  <!-- the breaking wave: a face rising from the right, a crest that throws forward, and a curl rolling under -->
+  <path d="M 640 600 C 760 590, 860 540, 930 470 C 990 410, 1040 350, 1110 335 C 1180 320, 1235 360, 1230 420
+           C 1226 462, 1190 482, 1158 470 C 1130 459, 1124 428, 1144 414 C 1160 403, 1182 414, 1178 432
+           C 1172 450, 1150 452, 1146 440
+           C 1110 470, 1095 540, 1130 598 C 1000 612, 800 612, 640 600 Z"
+        fill="url(#face)"/>
+  <path d="M 640 600 C 760 590, 860 540, 930 470 C 990 410, 1040 350, 1110 335 C 1180 320, 1235 360, 1230 420
+           C 1226 462, 1190 482, 1158 470 C 1130 459, 1124 428, 1144 414 C 1160 403, 1182 414, 1178 432"
+        fill="none" stroke="#087E8B" stroke-opacity="0.16" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 700 610 C 800 600, 880 560, 945 498 C 1000 445, 1050 392, 1110 380 C 1160 370, 1195 398, 1196 430"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- front swells -->
+  <path d="M0 585 C 170 565, 330 610, 520 582 S 840 552, 1020 590 S 1210 575, 1280 580 L1280 720 L0 720Z" fill="#3FB8AF" fill-opacity="0.06"/>
+  <path d="M0 650 C 200 630, 360 668, 560 645 S 880 622, 1060 652 S 1220 640, 1280 645 L1280 720 L0 720Z" fill="#0B3954" fill-opacity="0.05"/>
+  <path d="M0 585 C 170 565, 330 610, 520 582 S 840 552, 1020 590 S 1210 575, 1280 580" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="2"/>
+  <path d="M0 650 C 200 630, 360 668, 560 645 S 880 622, 1060 652 S 1220 640, 1280 645" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2"/>
+</svg>
+</body></html>
