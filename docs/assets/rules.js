@@ -1,4 +1,4 @@
-// Rules report (/rules/): three tabs (Overview, Rules, Results) over docs/data/results.json that share one set of
+// Best practice report (/rules/): four tabs (Summary, By table, By rule, All failures) over docs/data/results.json that share one set of
 // filters. Filters and the active tab live in the page address (?view=rules&category=Formatting), so views can be
 // bookmarked and the back button moves between tabs. results.json holds the failing checks, plus pass and fail
 // counts per rule and table for the pass rates. Shared parts come from ui.js; the housekeeping list is housekeeping.js.
@@ -6,8 +6,10 @@
   var M = window.ModelDocs, el = M.el, clear = M.clear, cap = M.cap, uniq = M.uniq, plural = M.plural;
   var SEVS = M.SEVS, SEV_ORDER = M.SEV_ORDER, tableLabel = M.tableLabel, sevChip = M.sevChip;
 
-  var VIEWS = [{ id: "overview", label: "Overview" }, { id: "rules", label: "Rules" }, { id: "results", label: "Results" }];
-  var OLD_VIEWS = { matrix: "overview", tables: "rules" };   // addresses from before the tabs were merged
+  var VIEWS = [{ id: "summary", label: "Summary" }, { id: "table", label: "By table" }, { id: "rule", label: "By rule" },
+               { id: "failures", label: "All failures" }];
+  // addresses from earlier versions of the report keep working
+  var OLD_VIEWS = { overview: "summary", matrix: "table", rules: "rule", tables: "rule", results: "failures" };
   var FILTERS = ["category", "severity", "table", "work", "rule"];
   var STATE_KEYS = FILTERS.concat(["q"]);   // q only searches the Results table
   var LABEL = { category: "Category", severity: "Severity", table: "Table", work: "Fix status", rule: "Rule", q: "Search" };
@@ -15,9 +17,9 @@
   var WORK = [{ id: "none", label: "Not raised" }, { id: "raised", label: "Raised" },
               { id: "in-progress", label: "In progress" }, { id: "done", label: "Done" }];
 
-  var app, root, results, rows, ruleById = {}, state = {}, view = "overview", ui = {}, hk, drawer = null;
+  var app, root, results, rows, ruleById = {}, state = {}, view = "summary", ui = {}, hk, drawer = null;
   var sorts = { rules: { key: "fail", dir: -1 }, results: { key: "severity", dir: 1 }, drawer: { key: "severity", dir: 1 } };
-  var expanded = {}, showPassing = false;
+  var showPassing = false;
 
   // ---- labels
   function ruleText(id) { return ruleById[id] ? ruleById[id].description : id; }
@@ -46,11 +48,11 @@
     state = {};
     STATE_KEYS.forEach(function (k) { if (p.get(k)) state[k] = p.get(k); });
     v = OLD_VIEWS[v] || v;
-    view = VIEWS.some(function (x) { return x.id === v; }) ? v : "overview";
+    view = VIEWS.some(function (x) { return x.id === v; }) ? v : "summary";
   }
   function address() {
     var p = new URLSearchParams();
-    if (view !== "overview") p.set("view", view);
+    if (view !== "summary") p.set("view", view);
     STATE_KEYS.forEach(function (k) { if (state[k]) p.set(k, state[k]); });
     var q = p.toString();
     return location.pathname + (q ? "?" + q : "");
@@ -300,60 +302,75 @@
   }
 
   // ---- pages
-  function pageOverview() {
+  function tableBars(host) {
+    var g = group(fails(["table"]), "table");
+    var items = Object.keys(g).map(function (t) {
+      var c = sevCounts(g[t]);
+      return { label: tableLabel(t), value: c.total, segments: segments(c), dim: state.table && state.table !== t, on: state.table === t,
+               tip: tableLabel(t) + ": " + c.total + " failing (" + sevSummary(c) + ")", onClick: function () { toggle("table", t); } };
+    }).sort(function (a, b) { return b.value - a.value || a.label.localeCompare(b.label); });
+    M.bars(host, items, { empty: "No failures match the filters." });
+  }
+
+  // ---- pages
+  function pageSummary() {
     kpis();
+    ruleBars(visual("Most-failed rules", { span: 6, sub: "Click a rule to filter every tab. By rule lists them all, with how to fix each one.",
+                                           data: function () { return fails(["rule"]); } }), 8);
+    tableBars(visual("Failures by table", { span: 6, sub: "Click a table to filter. By table shows them against each category.",
+                                            data: function () { return fails(["table"]); } }));
+    workBars(visual("Housekeeping status", { span: 6, sub: "Where the failing checks stand. Click a bar to filter.", data: function () { return fails(["work"]); } }));
+    passRate(visual("Pass rate by category", { span: 6, sub: "Share of checks that pass. Click a category to filter." }));
+  }
+
+  function pageTable() {
     matrix(visual("Failures by table and category", { span: 7, cls: "rpt-tall", data: matrixRows,
       sub: "Click a cell to select that table and category, or a heading to select a whole row or column. Hover a cell for its severity split." }));
     details(visual("Failing objects", { span: 5, cls: "rpt-details", sub: "Click + to add an item to your housekeeping list.", data: function () { return fails(); } }));
-    ruleBars(visual("Most-failed rules", { span: 4, sub: "Top 5. Click a rule to filter; the Rules page lists them all.", data: function () { return fails(["rule"]); } }), 5);
-    workBars(visual("Housekeeping status", { span: 4, sub: "Where the failing checks stand. Click a bar to filter.", data: function () { return fails(["work"]); } }));
-    passRate(visual("Pass rate by category", { span: 4, sub: "Share of checks that pass. Click a category to filter." }));
   }
 
-  function pageRules() {
-    var byRule = group(fails(), "rule"), passes = {}, clean = 0;
+  // Every failing rule as one long list, most serious first, each with what it checks, how to fix it and its objects.
+  function pageRule() {
+    var byRule = group(fails(), "rule"), passes = {};
     results.counts.forEach(function (c) {
       var rule = ruleById[c.rule];
       if ((state.category && rule.category !== state.category) || (state.severity && rule.severity !== state.severity) ||
           (state.rule && c.rule !== state.rule) || (state.table && c.table !== state.table)) return;
       passes[c.rule] = (passes[c.rule] || 0) + c.pass;
     });
-    var list = Object.keys(passes).map(function (id) {
-      var rule = ruleById[id], f = byRule[id] || [];
-      return { id: id, _tie: rule.name, name: rule.name, category: rule.category, severity: rule.severity, sev: SEV_ORDER[rule.severity],
-               source: rule.bpaId ? "a" : "z", bpaId: rule.bpaId, fix: rule.fix, fail: f.length, pass: passes[id], fails: f };
-    }).filter(function (r) { if (!r.fail) clean++; return showPassing || r.fail; });
-    var host = visual("By rule", { sub: "Click ▸ for how to fix a rule and the objects failing it.", data: function () { return fails(); } });
-    M.sortable(host, sorts.rules, [
-      { key: "", label: "", cls: "expand-col", cell: function (r) {
-          if (!r.fail) return "";
-          return el("button", { type: "button", class: "expand-btn", "aria-expanded": expanded[r.id] ? "true" : "false",
-            "aria-label": (expanded[r.id] ? "Hide" : "Show") + " failing objects for: " + r.name, text: expanded[r.id] ? "▾" : "▸",
-            onclick: function () { expanded[r.id] = !expanded[r.id]; render(); } }); } },
-      { key: "name", label: "Rule", cell: function (r) {
-          return el("span", {}, [el("strong", { class: "rule-name", text: r.name }), el("br"), el("span", { class: "rule-desc", text: ruleText(r.id) })]); } },
-      { key: "category", label: "Category", cell: function (r) { return r.category; } },
-      { key: "sev", label: "Severity", cell: function (r) { return sevChip(r.severity); } },
-      { key: "source", label: "Source", cell: function (r) { return r.bpaId ? el("span", { text: "BPA", title: "Best Practice Analyzer rule " + r.bpaId }) : "Project"; } },
-      { key: "fail", label: "Failing", num: true, cell: function (r) { return r.fail; } },
-      { key: "pass", label: "Passing", num: true, cell: function (r) { return r.pass; } }
-    ], list, { height: "44rem", onSort: render, empty: clean ? "No rules are failing for these filters." : "No rules match the filters.",
-      detail: function (r, span) {
-        if (!expanded[r.id] || !r.fail) return null;
-        return el("tr", { class: "detail-row" }, [el("td", {}), el("td", { colspan: String(span - 1) }, [
-          el("div", { class: "fail-list-title" }, [plural(r.fail, "failing object") + " ", hk.addAllButton(r.fails)]),
-          r.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), r.fix]) : null,
-          failItems(r.fails)])]);
-      } });
-    if (clean) {
-      host.appendChild(el("p", { class: "rpt-more" }, [el("button", { type: "button", class: "rules-chip",
-        text: showPassing ? "Hide rules with no failures" : "Show " + plural(clean, "rule") + " with no failures",
+    var failing = Object.keys(byRule).sort(function (a, b) {
+      return SEV_ORDER[ruleById[a].severity] - SEV_ORDER[ruleById[b].severity] || byRule[b].length - byRule[a].length ||
+             ruleName(a).localeCompare(ruleName(b));
+    });
+    var clean = Object.keys(passes).filter(function (id) { return !byRule[id]; }).sort(function (a, b) { return ruleName(a).localeCompare(ruleName(b)); });
+    var host = visual("Rules to fix (" + failing.length + ")", { data: function () { return fails(); },
+      sub: "Every rule the model breaks, most serious first, with how to fix it and the objects failing it. Click + to add an object to your housekeeping list." });
+    if (!failing.length) host.appendChild(el("p", { class: "dash-empty", text: "No rules are failing for these filters." }));
+    failing.forEach(function (id) {
+      var rule = ruleById[id], f = byRule[id];
+      host.appendChild(el("section", { class: "rule-card sev-edge-" + rule.severity }, [
+        el("div", { class: "rule-card-head" }, [sevChip(rule.severity), el("strong", { class: "rule-name", text: rule.name }),
+          el("span", { class: "rule-card-meta", text: rule.category + " · " + (rule.bpaId ? "Best Practice Analyzer" : "Project rule") + " · " +
+            plural(f.length, "failing object") + ", " + (passes[id] || 0) + " passing" })]),
+        el("p", { class: "rule-desc", text: rule.description }),
+        rule.fix ? el("p", { class: "hk-fix" }, [el("span", { class: "hk-fix-label", text: "How to fix " }), rule.fix]) : null,
+        el("div", { class: "rpt-details-actions" }, [hk.addAllButton(f)]),
+        failItems(f)]));
+    });
+    if (clean.length) {
+      host.appendChild(el("p", { class: "rpt-more" }, [el("button", { type: "button", class: "rules-chip", "aria-expanded": showPassing ? "true" : "false",
+        text: showPassing ? "Hide rules with no failures" : "Show " + plural(clean.length, "rule") + " with no failures",
         onclick: function () { showPassing = !showPassing; render(); } })]));
+      if (showPassing) {
+        host.appendChild(el("ul", { class: "rule-clean-list" }, clean.map(function (id) {
+          return el("li", { title: ruleText(id) }, [el("strong", { text: ruleName(id) }), " · " + (passes[id] || 0) + " passing"]);
+        })));
+      }
     }
   }
 
   function pageResults() {
-    var list = fails(), host = visual("Failing checks", {});
+    var list = fails(), host = visual("All failures", {});
     function current() {
       var q = (state.q || "").toLowerCase();
       return list.filter(function (r) {
@@ -363,7 +380,7 @@
     var table = el("div");
     function draw() {
       var items = current();
-      host.parentNode.querySelector("h3").textContent = "Failing checks (" + items.length + ")";
+      host.parentNode.querySelector("h3").textContent = "All failures (" + items.length + ")";
       resultsTable(table, sorts.results, items, "40rem", "Nothing matches the filters.", draw);
     }
     var search = el("input", { type: "search", class: "doc-filter", placeholder: "Object, table or rule", value: state.q || "", "aria-label": "Search results" });
@@ -452,7 +469,7 @@
   function render() {
     syncHeader();
     clear(ui.canvas);
-    ({ overview: pageOverview, rules: pageRules, results: pageResults })[view]();
+    ({ summary: pageSummary, table: pageTable, rule: pageRule, failures: pageResults })[view]();
   }
 
   M.ready(function () {

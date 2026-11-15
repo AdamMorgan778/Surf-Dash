@@ -13,19 +13,20 @@ This site is generated from the Power BI semantic model in the repository. It is
 | [Data catalogue](documentation/catalogue.md) | See what each table holds, its grain, who owns it and how often it refreshes. |
 | [Bus matrix](documentation/bus-matrix.md) | See which dimensions describe which business process. |
 | [Glossary](documentation/glossary.md) | Check what a business term means and where it appears in the model. |
-| [Rules report](rules/index.md) | See which rules the model breaks, filter them, and raise clean-up work. |
-| [Rule reference](rules/reference.md) | Read what each rule checks and how to fix a failure. |
+| [Best practice](rules/index.md) | See which modelling conventions and best-practice rules the model breaks, filter them, and raise clean-up work. |
+| [Rule library](rules/reference.md) | Read what each rule checks and how to fix a failure. |
 | [Play](play/index.md) | Race a jetski over sine-wave waves. Your score is multiplied by the documentation coverage. |
 
-A field marked *Missing* has no description in the model yet.
+A field marked *Missing* has no description in the model yet. The footer of every page says when the site was last updated, and links to the GitHub Actions run that built it.
 
-## The Rules report
+## The Best practice report
 
-The report has three tabs that share one set of filters:
+The report has four tabs that share one set of filters:
 
-- **Overview** shows the headline numbers, a matrix of failures by table and category, and the failing objects for whatever is selected.
-- **Rules** lists every rule with its failing and passing counts. Open a rule to see how to fix it and which objects fail it.
-- **Results** lists every failing check in one table that you can sort, search and download.
+- **Summary** shows the headline numbers and charts: the most-failed rules, failures by table, housekeeping status and pass rate by category.
+- **By table** shows a matrix of failures by table and category, and the failing objects for whatever is selected.
+- **By rule** lists every rule the model breaks, most serious first, with what it checks, how to fix it and the objects failing it.
+- **All failures** lists every failing check in one table that you can sort, search and download.
 
 Click a tile, a bar or a matrix cell to filter every tab; click it again to clear. **Show data** on a chart opens the rows behind it. The filters are part of the page address, so you can bookmark or share a view.
 
@@ -33,7 +34,7 @@ Rules have three severities. **Error** means something is wrong and should be fi
 
 ## Raise clean-up work
 
-1. On the Rules report, click **+** next to a failing object, or **Add all** on a rule. A **Housekeeping list** button appears at the bottom right.
+1. On the Best practice report, click **+** next to a failing object, or **Add all** on a rule. A **Housekeeping list** button appears at the bottom right.
 2. Open the list, check the title, add a note if it helps, and press **Create issue on GitHub**.
 3. GitHub opens with the issue filled in. Press **Submit**. Within about a minute a description is added under every item: the rule, what is breaking it and how to fix it.
 4. To start the work, open **Development** on the issue and choose **Create a branch**.

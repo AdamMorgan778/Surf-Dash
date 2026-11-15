@@ -1,5 +1,5 @@
 // Home page: headline tiles and the issues raised on GitHub. Each tile links to the page that owns the detail:
-// documentation gaps are on the Documentation page, rule results on the Rules report.
+// documentation gaps are on the Documentation page, rule results on the Best practice report.
 (function () {
   var M = window.ModelDocs, el = M.el;
 
@@ -25,7 +25,7 @@
       { label: "Documentation score", value: summary.score.pct + "%", sub: el("a", { href: root + "documentation/", text: summary.score.described + " of " + summary.score.total + " objects described. See what is missing" }) },
       { label: "Tables", value: tables.length, sub: count("fact") + " fact, " + count("dimension") + " dimension" },
       { label: "Columns and measures", value: sum("columns") + sum("measures"), sub: sum("measures") + " measures" },
-      { label: "Rule failures", value: fails, sub: el("a", { href: root + "rules/", text: f.error + " at error severity. Open the Rules report" }) },
+      { label: "Rule failures", value: fails, sub: el("a", { href: root + "rules/", text: f.error + " at error severity. Open the Best practice report" }) },
       { label: "Open issues", value: open.length, sub: summary.repo ? "on GitHub" : "no repository linked yet" },
       { label: "Work in progress", value: summary.work.items, sub: el("a", { href: root + "work/",
           text: M.plural(summary.work.people, "person") + ", " + M.plural(summary.work.overlaps, "overlap") + ". See who is changing what" }) }

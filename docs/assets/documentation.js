@@ -1,5 +1,5 @@
 // Documentation page: what the documentation is missing. Reads docs/data/gaps.json (worked out in tools/gaps.py)
-// and draws it with the shared parts in ui.js, so it matches the home page and the Rules report.
+// and draws it with the shared parts in ui.js, so it matches the home page and the Best practice report.
 (function () {
   var M = window.ModelDocs, el = M.el;
 
@@ -58,7 +58,7 @@
     drawList();
     if (c.descriptions) {
       list.appendChild(el("p", { class: "rpt-more rpt-hint" }, ["Missing descriptions are also rule failures. To share the work out, add them to a housekeeping list on the ",
-        el("a", { href: root + "rules/?category=Maintenance", text: "Rules report" }), "."]));
+        el("a", { href: root + "rules/?category=Maintenance", text: "Best practice report" }), "."]));
     }
   }
 
