@@ -43,6 +43,11 @@ table FactSales
 		displayFolder: Time Intelligence
 		lineageTag: 53c1516d-723b-4c9c-963a-b1653866b954
 
+	/// Average order value for the same period one year earlier.
+	measure 'Avg Order Value LY' = CALCULATE([Avg Order Value], SAMEPERIODLASTYEAR(DimDate[Date]))
+		formatString: \$#,0.00
+		displayFolder: Time Intelligence
+
 	/// Number of distinct surfers with at least one purchase.
 	measure 'Paying Customers' = DISTINCTCOUNT(FactSales[SurferKey])
 		formatString: #,0
