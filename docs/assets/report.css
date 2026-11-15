@@ -295,3 +295,17 @@ body {
 .work-stale { color: var(--md-default-fg-color--light); font-style: italic; }
 .rpt-visual.work-overlaps { border-color: var(--sev-warning); border-left-width: 4px; }
 .md-typeset .rpt-more .work-claim { margin-right: 0.5rem; }
+
+/* By rule: one card per failing rule */
+.rule-card { border: 1px solid var(--md-default-fg-color--lightest); border-left-width: 4px; border-radius: 8px; padding: 0.6rem 0.8rem; margin: 0 0 0.6rem; }
+.rule-card.sev-edge-error { border-left-color: var(--sev-error); }
+.rule-card.sev-edge-warning { border-left-color: var(--sev-warning); }
+.rule-card.sev-edge-info { border-left-color: var(--sev-info); }
+.rule-card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; font-size: 0.74rem; }
+.rule-card-head .sev-chip { font-size: 0.62rem; color: var(--md-default-fg-color--light); }
+.rule-card-meta { margin-left: auto; font-size: 0.62rem; color: var(--md-default-fg-color--light); }
+.md-typeset .rule-card .rule-desc { display: block; margin: 0.2rem 0 0; font-size: 0.66rem; }
+.md-typeset .rule-card ul.fail-list.hk-list { columns: 3 15rem; }
+.md-typeset ul.rule-clean-list { margin: 0.4rem 0 0; padding: 0; list-style: none; columns: 2 18rem; font-size: 0.64rem; }
+.md-typeset ul.rule-clean-list li { margin: 0 0 0.2rem; break-inside: avoid; }
+.md-typeset .rule-card .hk-fix { font-size: 0.64rem; margin: 0.25rem 0; }

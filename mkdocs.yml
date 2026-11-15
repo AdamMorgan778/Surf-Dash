@@ -26,7 +26,28 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
-# No nav section: MkDocs builds it from the files, so new table pages appear without editing this file.
+# The sidebar, in a fixed order. The dictionary's table pages are built but not listed: the Data dictionary page
+# lists them instead, so a model with many tables does not swamp the sidebar.
+nav:
+  - Overview: index.md
+  - Work in progress: work.md
+  - Documentation:
+      - documentation/index.md
+      - Data dictionary: documentation/dictionary/index.md
+      - Data catalogue: documentation/catalogue.md
+      - Bus matrix: documentation/bus-matrix.md
+      - Glossary: documentation/glossary.md
+  - Best practice:
+      - rules/index.md
+      - Rule library: rules/reference.md
+  - Play: play/index.md
+  - Using this site: guide.md
+
+not_in_nav: |
+  /documentation/dictionary/*.md
+
+# Shown in every page footer. tools/build.py sets it to when and by which GitHub Actions run the site was built.
+copyright: !ENV [SITE_BUILT, "Built locally"]
 
 extra_css:
   - assets/site.css

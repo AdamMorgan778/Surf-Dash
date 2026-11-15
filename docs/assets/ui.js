@@ -1,4 +1,4 @@
-// Shared parts for the home page (home.js) and the Rules report (rules.js, housekeeping.js): DOM helpers, tiles, bars,
+// Shared parts for the home page (home.js) and the Best practice report (rules.js, housekeeping.js): DOM helpers, tiles, bars,
 // visual cards, sortable tables and data loading. Both pages are built from these, so they look and behave the same.
 // Anything with logic (rule results, counts, housekeeping status) is worked out in Python; the scripts only draw it.
 window.ModelDocs = (function () {
@@ -139,17 +139,42 @@ window.ModelDocs = (function () {
   }
 
   // ---- dictionary index: filter rows as you type
-  function initDictFilter() {
-    var input = document.getElementById("dict-filter");
-    if (!input) return;
-    var rows = document.querySelectorAll(".md-typeset table tbody tr");
-    input.addEventListener("input", function () {
-      var q = input.value.trim().toLowerCase();
-      rows.forEach(function (r) { r.hidden = q !== "" && r.textContent.toLowerCase().indexOf(q) === -1; });
+  // A search box with data-filter="#id" hides the rows of the table inside that element that don't match.
+  function initFilters() {
+    document.querySelectorAll("input[data-filter]").forEach(function (input) {
+      var rows = document.querySelectorAll(input.getAttribute("data-filter") + " table tbody tr");
+      input.addEventListener("input", function () {
+        var q = input.value.trim().toLowerCase();
+        rows.forEach(function (r) { r.hidden = q !== "" && r.textContent.toLowerCase().indexOf(q) === -1; });
+      });
+    });
+  }
+  // The footer's build time (set by tools/build.py in UTC), shown in the viewer's time zone with how long ago it was.
+  function ago(ms) {
+    var m = Math.round(ms / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return plural(m, "minute") + " ago";
+    var h = Math.round(m / 60);
+    return h < 48 ? plural(h, "hour") + " ago" : plural(Math.round(h / 24), "day") + " ago";
+  }
+  function initBuilt() {
+    document.querySelectorAll("time.site-built").forEach(function (t) {
+      var d = new Date(t.getAttribute("datetime"));
+      if (isNaN(d)) return;
+      t.title = t.textContent;
+      t.textContent = d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) + " (" + ago(Date.now() - d) + ")";
     });
   }
   function ready(fn) { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn); else fn(); }
-  ready(initDictFilter);
+  // A <select class="doc-switch"> goes to the page its chosen option names (the table switcher on dictionary pages).
+  function initSwitches() {
+    document.querySelectorAll("select.doc-switch").forEach(function (s) {
+      s.addEventListener("change", function () { location.href = s.value; });
+    });
+  }
+  ready(initSwitches);
+  ready(initFilters);
+  ready(initBuilt);
 
   return { SEVS: SEVS, SEV_ORDER: SEV_ORDER, el: el, clear: clear, cap: cap, uniq: uniq, plural: plural, clickable: clickable,
            tableLabel: tableLabel, sevIcon: sevIcon, sevChip: sevChip, tile: tile, visual: visual, bars: bars, sortable: sortable,

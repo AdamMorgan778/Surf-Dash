@@ -63,7 +63,11 @@ def table_page(t, model, results, issues):
     for r in rels:
         if r["fromTable"] == t["name"]:
             rel_by_from.setdefault(r["fromColumn"], []).append(r["toTable"])
-    L = [f"# {t['name']}", "", t["description"] or MISSING, ""]
+    options = "".join(f'<option value="../{n}/"{" selected" if n == t["name"] else ""}>{n}</option>'
+                      for n in sorted(x["name"] for x in model["tables"]))
+    L = [f"# {t['name']}", "",
+         f'<p class="doc-crumb"><a href="../">Data dictionary</a> › <label>Table <select class="doc-switch">{options}</select></label></p>',
+         "", t["description"] or MISSING, ""]
     facts = [("Type", t["kind"].capitalize()), ("Business process", meta.get("business_process")), ("Grain", meta.get("grain")),
              ("Owner", meta.get("owner")), ("Steward", meta.get("steward")), ("Source", t["source"]),
              ("Rows", f"{t['rowCount']:,}" if t["rowCount"] is not None else None),
@@ -100,7 +104,22 @@ def table_page(t, model, results, issues):
     return "\n".join(L)
 
 
+def coverage(t):
+    """(described, total) over the table itself, its visible columns and its measures."""
+    objs = [t] + [c for c in t["columns"] if not c["isHidden"]] + t["measures"]
+    return sum(1 for o in objs if o["description"]), len(objs)
+
+
+def _filter(target, placeholder, label):
+    return f'<input class="doc-filter" type="search" data-filter="#{target}" placeholder="{placeholder}" aria-label="{label}">'
+
+
 def dictionary_index(model):
+    tables = []
+    for t in sorted(model["tables"], key=lambda t: t["name"]):
+        d, n = coverage(t)
+        tables.append([f"[{t['name']}]({t['name']}.md)", t["kind"].capitalize(), len(t["columns"]), len(t["measures"]),
+                       f"{round(100 * d / n) if n else 0}%", t["description"] or MISSING])
     rows = []
     for t in model["tables"]:
         link = f"[{t['name']}]({t['name']}.md)"
@@ -110,9 +129,15 @@ def dictionary_index(model):
                   m["description"] or MISSING] for m in t["measures"]]
     return "\n".join([
         "# Data dictionary", "",
-        f"Every column and measure in the **{model['name']}** model. Generated from the TMDL on {model['generated']}.", "",
-        '<input id="dict-filter" class="doc-filter" type="search" placeholder="Filter fields, for example revenue or key" aria-label="Filter the dictionary">',
-        "", table(["Table", "Field", "Kind", "Type / format", "Description"], rows)])
+        f"Every table, column and measure in the **{model['name']}** model. Generated from the TMDL on {model['generated']}.", "",
+        "## Tables", "", "Open a table for its columns, measures, DAX, relationships and rule failures.", "",
+        _filter("dict-tables", "Filter tables", "Filter the tables"), "",
+        '<div id="dict-tables" class="doc-scroll" markdown="1">', "",
+        table(["Table", "Type", "Columns", "Measures", "Described", "Description"], tables), "</div>", "",
+        "## All fields", "",
+        _filter("dict-fields", "Filter fields, for example revenue or key", "Filter the fields"), "",
+        '<div id="dict-fields" class="doc-scroll doc-scroll-tall" markdown="1">', "",
+        table(["Table", "Field", "Kind", "Type / format", "Description"], rows), "</div>"])
 
 
 def catalogue(model):
@@ -166,8 +191,9 @@ def rules_page(results):
         c["pass"] += row["pass"]
         c["fail"] += row["fail"]
     rules = results["rules"]
-    L = ["# Rule reference", "",
-         "What each rule checks. For charts and filters, see the [rules report](index.md).", "",
+    L = ["# Rule library", "",
+         "What each rule checks and how to fix a failure. For charts, filters and the failing objects, see the "
+         "[Best practice report](index.md).", "",
          f"The {len(rules)} rules the model is checked against on every build. "
          f"{sum(1 for r in rules if r.get('bpaId'))} of them match a rule in Microsoft's "
          f"[Best Practice Analyzer rule set]({BPA_SOURCE}) (BPA) and carry its ID. The rest are this project's own "
@@ -194,16 +220,27 @@ def glossary(model):
                             [[f"**{t['term']}**", t["definition"], ", ".join(f"`{r}`" for r in t.get("related", []))] for t in terms])])
 
 
+DOC_CATEGORY = "Documentation"   # rules in this category are shown with the documentation, not with best practice
+
+
+def best_practice(results):
+    """Pass rate over the checks of every rule outside the Documentation category."""
+    doc = {r["id"] for r in results["rules"] if r.get("category") == DOC_CATEGORY}
+    passed = sum(c["pass"] for c in results["counts"] if c["rule"] not in doc)
+    total = passed + sum(c["fail"] for c in results["counts"] if c["rule"] not in doc)
+    return {"pass": passed, "total": total, "pct": round(100 * passed / total, 1) if total else 0.0}
+
+
 def summary(model, results):
     """The few facts about the model that the site's pages need. The full model.json stays in build/."""
     tables = []
     for t in model["tables"]:
-        objs = [t] + [c for c in t["columns"] if not c["isHidden"]] + t["measures"]
+        d, n = coverage(t)
         tables.append({"name": t["name"], "kind": t["kind"], "owner": t["meta"].get("owner", ""),
-                       "columns": len(t["columns"]), "measures": len(t["measures"]),
-                       "described": sum(1 for o in objs if o["description"]), "total": len(objs)})
+                       "columns": len(t["columns"]), "measures": len(t["measures"]), "described": d, "total": n})
     return {"name": model["name"], "siteName": model["siteName"], "repo": model["repo"], "generated": model["generated"],
-            "score": results["score"], "failures": results["failures"], "tables": tables}   # work.json has its own file
+            "score": results["score"], "bestPractice": best_practice(results), "failures": results["failures"],
+            "tables": tables}   # work.json has its own file
 
 
 def write_json(name, data):
@@ -237,7 +274,7 @@ def main():
     write_json("work.json", work)
     print(f"work: {len(work['branches'])} unmerged branches, {len(work['items'])} items, {len(work['overlaps'])} overlaps"
           + (f". NOTE: {work['note']}" if work["note"] else ""))
-    print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rule reference")
+    print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rule library")
 
 
 if __name__ == "__main__":

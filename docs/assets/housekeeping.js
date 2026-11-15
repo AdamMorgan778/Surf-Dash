@@ -1,4 +1,4 @@
-// Housekeeping list for the Rules report: pick failing checks with +, review them in a side panel, and raise them
+// Housekeeping list for the Best practice report: pick failing checks with +, review them in a side panel, and raise them
 // as one GitHub issue. The list is kept in this browser until it is raised.
 // Each failing check arrives from Python (tools/housekeeping.py) with its checklist line (`item`) and where it
 // stands in an open issue (`work`), so this file only draws and collects. Checks already in an issue are locked.
