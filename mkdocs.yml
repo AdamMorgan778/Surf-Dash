@@ -13,15 +13,15 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
-      accent: teal
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-night
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: teal
-      accent: teal
+      primary: custom
+      accent: custom
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
@@ -29,7 +29,8 @@ theme:
 # The sidebar, in a fixed order. The dictionary's table pages are built but not listed: the Data dictionary page
 # lists them instead, so a model with many tables does not swamp the sidebar.
 nav:
-  - Overview: index.md
+  - Home: index.md
+  - Overview: overview.md
   - Work in progress: work.md
   - Documentation:
       - documentation/index.md
@@ -53,6 +54,7 @@ extra_css:
   - assets/site.css
   - assets/report.css
   - assets/jetski.css
+  - assets/barrel.css
 extra_javascript:
   - assets/ui.js
   - assets/home.js
@@ -61,6 +63,7 @@ extra_javascript:
   - assets/housekeeping.js
   - assets/rules.js
   - assets/jetski.js
+  - assets/barrel.js
 
 markdown_extensions:
   - tables
