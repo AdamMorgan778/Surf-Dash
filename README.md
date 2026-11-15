@@ -1,10 +1,41 @@
-# Surf Analytics
+# Model docs for a Power BI project
 
-**[Open the live dashboard](https://adammorgan778.github.io/Surf-Dash/)**
+**[Open the live site](https://adammorgan778.github.io/Surf-Dash/)**
 
-A Power BI project (`SurfAnalytics.pbip`) about surfing, with a documentation site generated from its semantic model: a data dictionary, a data catalogue, a bus matrix and an overview dashboard with rule results and GitHub issues.
+A Power BI project (PBIP) with a documentation site generated from its semantic model: a data dictionary, a data catalogue, a bus matrix, a glossary, and a report of the modelling rules the model breaks. Clean-up work is raised from the site as GitHub issues, and every pull request is checked against the rules.
 
-## Build the docs
+The model in this repository, Surf Analytics, is sample content. The tooling around it is a template: swap in your own model and it documents and checks that instead.
+
+## Start a new project from this template
+
+1. Create a repository from this one (**Use this template** on GitHub, or copy the files).
+2. Replace `SurfAnalytics.pbip`, `SurfAnalytics.SemanticModel/`, `SurfAnalytics.Report/` and `Data/` with your own PBIP project. The model must be saved in TMDL format.
+3. Edit the project files listed below.
+4. On GitHub, set **Settings, Pages, Source** to **GitHub Actions**.
+5. Push to `main`. The site builds and publishes itself.
+
+Check who can see the site before you publish a real model. A GitHub Pages site is public, even from a private repository, unless your organisation has private Pages (GitHub Enterprise Cloud).
+
+## Which files are yours
+
+| Yours: edit per project | What it holds |
+| --- | --- |
+| `*.SemanticModel/` | The model. Descriptions are the `///` lines above each table, column and measure. |
+| `settings.yml` | Site name, which model folder to read, how long closed issues stay listed. Every key is optional. |
+| `rules.json` | Which rules are on, their severity, wording and settings. |
+| `metadata/tables.yaml` | Owner, steward, grain, refresh and sensitivity for each table. |
+| `metadata/glossary.yaml` | Business terms and the fields they relate to. |
+
+| The template's: replace as a set to upgrade | What it holds |
+| --- | --- |
+| `tools/` | The Python that reads the model, runs the rules and writes the pages. |
+| `docs/assets/`, `docs/index.md`, `docs/guide.md`, `docs/rules/index.md`, `mkdocs.yml` | The site's scripts, styles and hand-written pages. |
+| `tests/` | Tests for the tools. They read `tests/fixtures/sample`, never your model. |
+| `.github/` | The workflows and issue forms. |
+
+Everything else under `docs/` is generated and not committed.
+
+## Build it locally
 
 ```
 python -m venv .venv
@@ -12,65 +43,65 @@ python -m venv .venv
 .venv\Scripts\python tools/build.py --serve
 ```
 
-`tools/build.py` reads the TMDL, applies `rules.json`, fetches issues from the GitHub remote, writes the pages under `docs/` and builds the site into `site/`. With `--serve` it previews at http://127.0.0.1:8000. Run the tests with `python -m pytest tests`.
+`tools/build.py` reads the model, applies `rules.json`, fetches issues from the GitHub remote, writes the pages and builds the site into `site/`. With `--serve` it previews at http://127.0.0.1:8000. Run the tests with `python -m pytest tests`.
 
-## Where things live
+To open the sample report in Power BI Desktop, set the `DataFolder` parameter to the full path of the `Data` folder on your machine.
 
-| Path | What it is |
-| --- | --- |
-| `SurfAnalytics.SemanticModel/` | The model. Descriptions are the `///` lines above each table, column and measure. |
-| `metadata/tables.yaml` | Owner, steward, grain, refresh and sensitivity per table. |
-| `metadata/glossary.yaml` | Glossary terms. |
-| `rules.json` | The rules and their severities. The checks are in `tools/run_rules.py`. |
-| `.github/ISSUE_TEMPLATE/data-request.yml` | Issue form. Its Table dropdown is how an issue is matched to a table; update the list when tables change. |
-| `.github/workflows/publish.yml` | Builds and deploys the site to GitHub Pages on push to `main`, on issue changes and daily. |
+## How it works
+
+```
+*.SemanticModel (TMDL) ──► parse_model.py ──► build/model.json ──► run_rules.py ──► build/results.json ─┐
+metadata/*.yaml ─────────┘                                                                              ├─► generate_docs.py ──► docs/ ──► MkDocs ──► site/
+GitHub issues ───────────► fetch_issues.py ──► build/issues.json ───────────────────────────────────────┘
+```
+
+Python works everything out; the scripts in `docs/assets/` only draw it. The site reads three small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table) and `issues.json`.
+
+| Workflow | Runs when | Does |
+| --- | --- | --- |
+| `publish.yml` | Push to `main`, an issue changes, daily | Tests, builds and deploys the site. |
+| `check.yml` | A pull request | Tests, builds without deploying, and compares rule results with the base branch. |
+| `housekeeping-details.yml` | An issue is opened | Adds a description under every housekeeping item and the `housekeeping` label. |
+| `branch-created.yml` | A branch is created | Rebuilds the site, so items on that issue show as In progress. |
 
 ## Rules
 
-`rules.json` lists 45 rules. 37 of them match a rule in Microsoft's [Best Practice Analyzer rule set](https://github.com/microsoft/Analysis-Services/tree/master/BestPracticeRules) and carry its ID in `bpaId`: 33 are Python ports of BPA rules, and 4 of the project's original rules were already equivalent. The other 8 are the project's own documentation and naming rules. The built site has a **Rules report** (`docs/rules/index.md`, drawn by `docs/assets/rules.js` and styled by `docs/assets/report.css`): a Power BI-style report with Overview, Matrix, Rules and Tables pages that share one set of filters. Clicking a bar, card or matrix cell cross-filters every page, each visual has a **Show data** button that opens its rows as a scrollable table with a CSV download, and the Tables page holds the full breakdown. A generated **rule reference** lists every rule with its current pass and fail counts.
+A rule in `rules.json` looks like this:
 
-Each rule names a `check`, which is a function in `tools/run_rules.py` that takes the parsed model and returns one pass or fail row per object. To add a rule:
-
-1. Write the function and add it to `CHECKS`.
-2. Add an entry to `rules.json` with an `id`, `check`, `category`, `severity` (error, warning or info), `description`, a one-sentence `fix` and, if it comes from BPA, `bpaId`.
-3. Add a breaking case for it to `BREAK` in `tests/test_rules.py`. The tests fail until every check has one.
-
-To silence a rule, lower its severity or remove its entry from `rules.json`.
-
-## Housekeeping list
-
-On the Rules report, click **+** next to any failing object (or **Add all** on a rule) to collect clean-up work. The list is kept in your browser until you raise it. **Create issue on GitHub** opens a pre-filled issue from the **Housekeeping** form (`.github/ISSUE_TEMPLATE/housekeeping.yml`); press **Submit**, then use **Development → Create a branch** on the issue to start the work.
-
-Each item is a short checklist line ending in `(rule: <id>)`, so even long lists fit in GitHub's "new issue" link:
-
-```
-- [ ] FactSales · Revenue — Hide fact table columns (rule: hide-fact-columns)
+```json
+{"id": "table-naming", "name": "Tables use Dim/Fact PascalCase names", "check": "table_naming",
+ "category": "Naming Conventions", "severity": "warning", "params": {"pattern": "^(Dim|Fact)[A-Z][A-Za-z0-9]*$"},
+ "description": "Table names are PascalCase with a Dim or Fact prefix.", "fix": "Rename the table ..."}
 ```
 
-When the issue is opened, the **Describe housekeeping items** workflow (`.github/workflows/housekeeping-details.yml`, running `tools/expand_housekeeping.py`) adds a description under every item, looked up from the current model:
-
-```
-- [ ] FactSales · Revenue — Hide fact table columns (rule: hide-fact-columns)
-  - **Rule:** Hide fact table columns · Formatting · warning · BPA HIDE_FACT_TABLE_COLUMNS
-  - **Breaking it:** column Revenue in table FactSales (decimal, visible), linked to its TMDL line
-  - **What the rule is:** Numeric columns aggregated by a measure are hidden, so people use the measure.
-  - **How to fix:** Hide the column; people use the measure that aggregates it instead.
-```
-
-It runs once per issue. If an issue is too big for GitHub's body limit, the checklist stays in the issue and the descriptions are posted as comments. Rule names and fix notes come from `name` and `fix` in `rules.json`. To try it locally: `python tools/expand_housekeeping.py --dry-run --event <event.json>`.
-
-`tools/fetch_issues.py` reads the checklist lines back, so items in an open housekeeping issue show a status tag in the report, and the Overview's issue list shows progress from the ticked boxes.
-
-Once an item is in an open housekeeping issue it is locked (no **+** button) and carries a status tag:
-
-| Tag | Meaning |
+| To | Do this in `rules.json` |
 | --- | --- |
-| **Raised · #12** | In an issue, nobody has picked it up yet. |
-| **In progress · @name · #12** | Someone is on it: the issue has an assignee, a branch made with **Create a branch**, or the `in-progress` label. |
-| **Done · #12** | Ticked on the issue; it drops off the report once the fix reaches `main` and the rule passes. |
+| Switch a rule off | Add `"enabled": false`. |
+| Make it block pull requests, or stop blocking | Set `severity` to `error`, or to `warning` or `info`. |
+| Change what it accepts | Edit `params`, where the rule has them, and keep `description` and `fix` in step. |
+| Reword it | Edit `name`, `description` or `fix`. |
 
-To show you're working on something, assign yourself to the issue, use **Create a branch**, or add the `in-progress` label. The site rebuilds on issue changes (`publish.yml`) and when a branch is created (`branch-created.yml`, which starts `publish.yml` on the default branch). Linked branches are read through GitHub's GraphQL API, which needs a token, so local builds without `GITHUB_TOKEN` skip that check. The report's **Fix status** filter and the Rules tab's **Housekeeping status** chart use the same statuses.
+Rules with a `bpaId` are Python ports of rules in Microsoft's [Best Practice Analyzer rule set](https://github.com/microsoft/Analysis-Services/tree/master/BestPracticeRules). They read only what the TMDL files hold, so BPA rules that need a live model are not included.
 
-One-time setup: create the labels `housekeeping` and `in-progress` in the repository (Issues, Labels). GitHub only applies a form's label if it already exists.
+To add a check:
 
-Pages must be set to deploy from GitHub Actions in the repository settings (Settings, Pages, Source).
+1. Write a function in `tools/run_rules.py` that takes the model and returns one pass or fail row per object, and add it to `CHECKS`.
+2. Add a case to `BREAK` in `tests/test_rules.py` that makes it fail. The tests fail until every check has one.
+3. Add an entry to `rules.json`.
+
+Two principles keep the results honest. One problem is one failure: if two rules would flag the same object for the same reason, narrow one of them. And tests check the tools while rules check the project: a test must never depend on your model, or fixing the model would break the build.
+
+## Pull request check
+
+`check.yml` runs `tools/check_pr.py`, which applies the pull request's rules to both versions of the model. Its summary lists the failures the change adds and fixes, and it annotates the changed lines. It fails only when the change **adds** a failure at error severity, so clean-up can be merged a piece at a time.
+
+A failed check does not stop a merge by itself. To enforce it, add a branch rule on `main` that requires the **Model checks / check** status (Settings, Rules, Rulesets).
+
+## Housekeeping
+
+How people use the housekeeping list and what the Raised, In progress and Done tags mean is on the site's **Using this site** page (`docs/guide.md`). For maintainers:
+
+- The item line (`- [ ] Table · Object — Rule name (rule: id)`) is written and read by `tools/housekeeping.py`, and nowhere else.
+- The report sends only those short lines in the "new issue" link. `tools/expand_housekeeping.py` adds the descriptions after the issue is opened, in the issue itself or, for very long lists, in comments.
+- Linked branches are read through GitHub's GraphQL API, which needs a token, so a local build without `GITHUB_TOKEN` skips that check.
+- The `in-progress` label is optional. Create it the first time someone wants to use it.

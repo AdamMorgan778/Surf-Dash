@@ -1,0 +1,44 @@
+name: Model checks
+
+# Runs on every pull request: the tool tests, a full build of the site (not deployed), and a comparison of the
+# rule results with the base branch. The job summary lists the failures the change adds and fixes. The job fails
+# when the change adds a failure at error severity; failures already on the base branch do not block.
+# To make a failed check stop a merge, require "Model checks / check" in a branch rule (Settings, Rules).
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      DOCS_BRANCH: ${{ github.head_ref }}
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Test the tools
+        run: python -m pytest tests -q
+      - name: Check the scripts parse
+        run: for f in docs/assets/*.js; do node --check "$f"; done
+      - name: Build the site (not deployed)
+        run: python tools/build.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compare rule results with the base branch
+        run: |
+          git worktree add "$RUNNER_TEMP/base" "origin/$BASE_REF"
+          python tools/check_pr.py --base "$RUNNER_TEMP/base"

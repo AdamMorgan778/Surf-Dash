@@ -119,14 +119,14 @@ def _plain(text):
     return re.sub(r"[^a-z0-9]", "", (text or "").lower())
 
 
-def description_quality(model):
+def description_quality(model, min_words=2):
     """A description that is there, but only repeats the name or is too short to say anything."""
     rows = []
     for typ, table, o in _objects(model):
         if typ == "partition" or not o.get("description") or (typ == "column" and o["isHidden"]):
             continue
         d = o["description"]
-        rows.append(_row(o["name"], typ, table, _plain(d) != _plain(o["name"]) and len(d.split()) >= 3, o["link"]))
+        rows.append(_row(o["name"], typ, table, _plain(d) != _plain(o["name"]) and len(d.split()) >= min_words, o["link"]))
     return rows
 
 
