@@ -35,7 +35,7 @@
   }
   function objectLink(r) { return r.link ? el("a", { href: r.link, text: objectText(r) }) : el("span", { text: objectText(r) }); }
   function tableCell(t) {
-    return t === "(model)" ? el("span", { text: "Whole model" }) : el("a", { href: root + "dictionary/" + t + "/", text: t });
+    return t === "(model)" ? el("span", { text: "Whole model" }) : el("a", { href: root + "documentation/dictionary/" + t + "/", text: t });
   }
   function sortTables(a, b) { return (a === "(model)") - (b === "(model)") || a.localeCompare(b); }
   function sevSummary(c) { return c.error + " error, " + c.warning + " warning, " + c.info + " info"; }

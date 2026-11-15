@@ -34,6 +34,7 @@ extra_css:
 extra_javascript:
   - assets/ui.js
   - assets/home.js
+  - assets/documentation.js
   - assets/housekeeping.js
   - assets/rules.js
 

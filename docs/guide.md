@@ -6,11 +6,12 @@ This site is generated from the Power BI semantic model in the repository. It is
 
 | Page | Use it to |
 | --- | --- |
-| [Overview](index.md) | See how well the model is documented, how many rules it breaks and which issues are open. |
-| [Data dictionary](dictionary/index.md) | Look up a column or measure: its type, format, description and DAX. Each table has its own page, which also shows what every measure depends on. |
-| [Data catalogue](catalogue.md) | See what each table holds, its grain, who owns it and how often it refreshes. |
-| [Bus matrix](bus-matrix.md) | See which dimensions describe which business process. |
-| [Glossary](glossary.md) | Check what a business term means and where it appears in the model. |
+| [Overview](index.md) | See the headline numbers and which issues are open. |
+| [Documentation](documentation/index.md) | See what the documentation is missing: descriptions, catalogue fields and broken glossary references. |
+| [Data dictionary](documentation/dictionary/index.md) | Look up a column or measure: its type, format, description and DAX. Each table has its own page, which also shows what every measure depends on. |
+| [Data catalogue](documentation/catalogue.md) | See what each table holds, its grain, who owns it and how often it refreshes. |
+| [Bus matrix](documentation/bus-matrix.md) | See which dimensions describe which business process. |
+| [Glossary](documentation/glossary.md) | Check what a business term means and where it appears in the model. |
 | [Rules report](rules/index.md) | See which rules the model breaks, filter them, and raise clean-up work. |
 | [Rule reference](rules/reference.md) | Read what each rule checks and how to fix a failure. |
 
