@@ -45,6 +45,21 @@ def form_fields(body):
     return fields
 
 
+# A claim line in a "Working on" issue, as written by the Work in progress page:
+#   - Table · FactSales          - Report page · Shop & Lessons
+_CLAIM = re.compile(r"^\s*[-*]\s+(?:\[[ xX]\]\s+)?(Table|Report page)\s+·\s+(.+?)\s*$", re.I)
+
+
+def parse_claims(text):
+    """[{kind: table | page, name}] for every claim line in a Working on issue's Items field."""
+    out = []
+    for line in (text or "").splitlines():
+        m = _CLAIM.match(line)
+        if m:
+            out.append({"kind": "table" if m.group(1).lower() == "table" else "page", "name": m.group(2)})
+    return out
+
+
 def shape(issue):
     fields = form_fields(issue.get("body"))
     labels = [l["name"] for l in issue.get("labels", [])]
@@ -63,6 +78,12 @@ def shape(issue):
                    progress={"done": sum(1 for i in items if i["done"]), "total": len(items)})
         if not table:
             out["table"] = MODEL_LABEL if len(tables) != 1 or tables[0] == MODEL_TABLE else tables[0]
+    claims = parse_claims(fields.get("items", ""))
+    if claims:
+        out.update(claims=claims, requestType="Working on")
+        if not table:
+            out["table"] = claims[0]["name"] if len(claims) == 1 and claims[0]["kind"] == "table" else MODEL_LABEL
+    out["author"] = (issue.get("user") or {}).get("login", "")
     out["assignees"] = [a["login"] for a in issue.get("assignees") or [] if a.get("login")]
     out["branches"] = []
     set_work(out)
@@ -142,14 +163,22 @@ def fetch(slug):
     return shaped
 
 
+def fetch_pulls(slug):
+    """Open pull requests, to name the person and link the review for each unmerged branch."""
+    return [{"number": p["number"], "url": p["html_url"], "branch": p["head"]["ref"], "author": (p.get("user") or {}).get("login", ""),
+             "draft": bool(p.get("draft")), "title": p["title"]}
+            for p in _get(f"https://api.github.com/repos/{slug}/pulls?state=open&per_page=100")]
+
+
 def main():
     slug = repo_slug()
-    issues, note = [], ""
+    issues, pulls, note = [], [], ""
     if not slug:
         note = "No GitHub remote configured; issues were not fetched."
     else:
         try:
             issues = fetch(slug)
+            pulls = fetch_pulls(slug)
         except (urllib.error.URLError, TimeoutError, ValueError) as e:
             note = f"Could not fetch issues: {e}"
     if note:
@@ -157,7 +186,7 @@ def main():
     os.makedirs(BUILD, exist_ok=True)
     with open(os.path.join(BUILD, "issues.json"), "w", encoding="utf-8") as f:
         json.dump({"repo": slug, "fetched": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-                   "note": note, "closedDays": CLOSED_DAYS, "issues": issues}, f, indent=2)
+                   "note": note, "closedDays": CLOSED_DAYS, "issues": issues, "pulls": pulls}, f, indent=2)
     print(f"issues.json: {sum(1 for i in issues if i['state'] == 'open')} open, "
           f"{sum(1 for i in issues if i['state'] == 'closed')} recently closed")
 

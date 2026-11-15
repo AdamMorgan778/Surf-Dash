@@ -11,5 +11,8 @@ site_name: Surf Analytics model docs
 # Fact tables also need business_process. Default: owner, steward, grain, refresh, sensitivity.
 # catalogue_fields: [owner, steward, grain, refresh, sensitivity]
 
+# A branch with no commits for this many days is marked stale on the Work in progress page. Default: 30.
+# stale_branch_days: 30
+
 # How long a closed issue stays on the home page, in days. Default: 30.
 closed_issue_days: 30

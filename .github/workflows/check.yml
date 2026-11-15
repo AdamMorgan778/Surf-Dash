@@ -1,7 +1,8 @@
 name: Model checks
 
 # Runs on every pull request: the tool tests, a full build of the site (not deployed), and a comparison of the
-# rule results with the base branch. The job summary lists the failures the change adds and fixes. The job fails
+# rule results with the base branch. The job summary lists the failures the change adds and fixes, and anything
+# the change touches that someone else also has in hand (a warning, never a failure). The job fails
 # when the change adds a failure at error severity; failures already on the base branch do not block.
 # To make a failed check stop a merge, require "Model checks / check" in a branch rule (Settings, Rules).
 on:
@@ -10,6 +11,7 @@ on:
 permissions:
   contents: read
   issues: read
+  pull-requests: read
 
 concurrency:
   group: check-${{ github.ref }}

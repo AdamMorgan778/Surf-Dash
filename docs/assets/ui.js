@@ -25,7 +25,7 @@ window.ModelDocs = (function () {
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
   function uniq(list) { var seen = {}, out = []; list.forEach(function (v) { if (!seen[v]) { seen[v] = 1; out.push(v); } }); return out; }
-  function plural(n, word) { return n + " " + word + (n === 1 ? "" : /(s|x|ch|sh)$/.test(word) ? "es" : "s"); }
+  function plural(n, word) { return n + " " + (n === 1 ? word : word === "person" ? "people" : word + (/(s|x|ch|sh)$/.test(word) ? "es" : "s")); }
   function clickable(node, fn, label) {
     node.setAttribute("role", "button"); node.setAttribute("tabindex", "0");
     if (label) node.setAttribute("aria-label", label);

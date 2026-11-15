@@ -1,0 +1,32 @@
+name: Rebuild docs on branch activity
+
+# The Work in progress page shows what unmerged branches change, and "Create a branch" on a housekeeping issue
+# marks its items In progress. So the site is rebuilt whenever a branch is created, pushed to or deleted, or a
+# pull request is opened or closed.
+# A run started by these events belongs to the branch, and Pages only deploys from the default branch, so this
+# hands off to the publish workflow on the default branch instead of deploying.
+on:
+  create:
+  delete:
+  push:
+    branches-ignore: [main, master]
+  pull_request:
+    types: [opened, closed, reopened, ready_for_review, converted_to_draft]
+
+permissions:
+  actions: write
+
+concurrency:
+  group: branch-activity
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    if: github.event_name != 'create' && github.event_name != 'delete' || github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start the publish workflow on the default branch
+        run: gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

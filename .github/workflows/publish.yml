@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   issues: read
+  pull-requests: read
   pages: write
   id-token: write
 
@@ -24,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # every branch, so the Work in progress page can compare them with the default branch
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
