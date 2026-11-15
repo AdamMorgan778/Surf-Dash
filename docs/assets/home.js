@@ -26,7 +26,9 @@
       { label: "Tables", value: tables.length, sub: count("fact") + " fact, " + count("dimension") + " dimension" },
       { label: "Columns and measures", value: sum("columns") + sum("measures"), sub: sum("measures") + " measures" },
       { label: "Rule failures", value: fails, sub: el("a", { href: root + "rules/", text: f.error + " at error severity. Open the Rules report" }) },
-      { label: "Open issues", value: open.length, sub: summary.repo ? "on GitHub" : "no repository linked yet" }
+      { label: "Open issues", value: open.length, sub: summary.repo ? "on GitHub" : "no repository linked yet" },
+      { label: "Work in progress", value: summary.work.items, sub: el("a", { href: root + "work/",
+          text: M.plural(summary.work.people, "person") + ", " + M.plural(summary.work.overlaps, "overlap") + ". See who is changing what" }) }
     ].map(M.tile)));
 
     var canvas = el("div", { class: "rpt-canvas home-canvas" });

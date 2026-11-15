@@ -7,6 +7,7 @@ This site is generated from the Power BI semantic model in the repository. It is
 | Page | Use it to |
 | --- | --- |
 | [Overview](index.md) | See the headline numbers and which issues are open. |
+| [Work in progress](work.md) | See which tables, columns, measures and report pages someone is already changing, before you start on them. |
 | [Documentation](documentation/index.md) | See what the documentation is missing: descriptions, catalogue fields and broken glossary references. |
 | [Data dictionary](documentation/dictionary/index.md) | Look up a column or measure: its type, format, description and DAX. Each table has its own page, which also shows what every measure depends on. |
 | [Data catalogue](documentation/catalogue.md) | See what each table holds, its grain, who owns it and how often it refreshes. |
@@ -51,10 +52,29 @@ Once an item is in an open housekeeping issue, the report shows a tag beside it 
 
 To show you are working on something, assign yourself to the issue or create a branch from it.
 
+## Work in progress
+
+Two people editing the same part of a Power BI project at once usually ends in a merge conflict. Before you start, open [Work in progress](work.md) and check that what you plan to change is **Free**.
+
+The page shows three things:
+
+- **Unmerged branches.** Everything a branch changes compared with the main branch: columns, measures, relationships, report pages and visuals. It appears about a minute after the branch is pushed.
+- **Housekeeping fixes in progress.** Items in a housekeeping issue that someone has picked up.
+- **Claims.** Tables or report pages someone has said they are about to change.
+
+Work that is only on your own computer can't be seen. So when you start something:
+
+1. Tick the tables and report pages you are about to change and press **Claim selected**.
+2. GitHub opens a **Working on** issue with them filled in. Press **Submit**.
+3. Push your branch early, even unfinished, so the exact objects show.
+4. Close the issue when your work is merged. That releases the claim.
+
+**Overlaps** at the top of the page lists anything in more than one person's hands. A few shared files (the report's settings, page order and theme, and the model's settings) are changed by many kinds of edit, so two branches touching one of them is flagged even when the edits look unrelated.
+
 ## Ask for a change
 
 For anything that is not clean-up (a new measure, a definition change, a data problem, a question), open a **Model request** issue on GitHub. Name the table so the request shows against it on the Overview page.
 
 ## Pull requests
 
-Every pull request is checked against the rules. The check's summary lists the failures your change adds and the ones it fixes. A pull request that adds a failure at error severity is marked as failed; failures that were already there do not count against you.
+Every pull request is checked against the rules. The check's summary lists the failures your change adds and the ones it fixes, and warns you when your change touches something another person also has in hand. A pull request that adds a failure at error severity is marked as failed; failures that were already there do not count against you.

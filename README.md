@@ -55,7 +55,7 @@ metadata/*.yaml ─────────┘                                  
 GitHub issues ───────────► fetch_issues.py ──► build/issues.json ───────────────────────────────────────┘
 ```
 
-Python works everything out; the scripts in `docs/assets/` only draw it. The site reads four small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table), `issues.json` and `gaps.json` (what the documentation is missing, from `tools/gaps.py`).
+Python works everything out; the scripts in `docs/assets/` only draw it. The site reads five small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table), `issues.json`, `gaps.json` (what the documentation is missing, from `tools/gaps.py`) and `work.json` (who is changing what, from `tools/work.py`).
 
 The sidebar is built from the folders under `docs/`. The generated bus matrix, catalogue, glossary and dictionary are written to `docs/documentation/`, so they appear as one **Documentation** section whose first page is the what-is-missing dashboard.
 
@@ -64,7 +64,7 @@ The sidebar is built from the folders under `docs/`. The generated bus matrix, c
 | `publish.yml` | Push to `main`, an issue changes, daily | Tests, builds and deploys the site. |
 | `check.yml` | A pull request | Tests, builds without deploying, and compares rule results with the base branch. |
 | `housekeeping-details.yml` | An issue is opened | Adds a description under every housekeeping item and the `housekeeping` label. |
-| `branch-created.yml` | A branch is created | Rebuilds the site, so items on that issue show as In progress. |
+| `branch-activity.yml` | A branch is created, pushed to or deleted; a pull request is opened or closed | Rebuilds the site, so the Work in progress page and the In progress tags stay current. |
 
 ## Rules
 
@@ -98,6 +98,14 @@ Two principles keep the results honest. One problem is one failure: if two rules
 `check.yml` runs `tools/check_pr.py`, which applies the pull request's rules to both versions of the model. Its summary lists the failures the change adds and fixes, and it annotates the changed lines. It fails only when the change **adds** a failure at error severity, so clean-up can be merged a piece at a time.
 
 A failed check does not stop a merge by itself. To enforce it, add a branch rule on `main` that requires the **Model checks / check** status (Settings, Rules, Rulesets).
+
+## Work in progress
+
+`tools/work.py` builds the **Work in progress** page (`docs/work.md`) from three sources: branches not yet merged, housekeeping issues in progress, and open **Working on** issues (claims). For each unmerged branch it compares the PBIP files with the point where the branch left the default branch, and reports the columns, measures, relationships, report pages and visuals that differ. Anything in more than one person's hands is listed as an overlap, on the page and in the pull request check's summary.
+
+- The publish workflow fetches every branch (`fetch-depth: 0`) so the comparison can run.
+- Work that has not been pushed is invisible; claims cover that gap. A claim is a line such as `- Table · FactSales` in a Working on issue, read by `tools/fetch_issues.py`.
+- `stale_branch_days` in `settings.yml` sets when an untouched branch is marked stale.
 
 ## Housekeeping
 

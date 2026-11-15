@@ -51,14 +51,19 @@ def blob_link(path, line=None, slug=None):
 
 
 def parse_file(path):
-    """Return the top-level objects in a TMDL file.
+    """The top-level objects in a TMDL file. See parse_text."""
+    with open(path, encoding="utf-8-sig") as f:
+        return parse_text(f.read())
+
+
+def parse_text(text):
+    """Return the top-level objects in TMDL text.
 
     Each object: {type, name, line, description, expression, props, children}. Bare flags such as
     `isHidden` are stored as True. Lines indented deeper than an object's properties are treated as
     continuation of the last expression (multi-line DAX or M).
     """
-    with open(path, encoding="utf-8-sig") as f:
-        lines = f.read().split("\n")
+    lines = text.replace("\r\n", "\n").split("\n")
     objects, stack, pending, expr_target = [], [], [], None
     for no, raw in enumerate(lines, 1):
         if not raw.strip():

@@ -10,6 +10,7 @@ from fetch_issues import match_tables
 from gaps import gaps
 from housekeeping import annotate
 from tmdl import BUILD, ROOT, settings
+from work import collect
 
 DOCS = os.path.join(ROOT, "docs")
 SECTION = os.path.join(DOCS, "documentation")
@@ -202,7 +203,7 @@ def summary(model, results):
                        "columns": len(t["columns"]), "measures": len(t["measures"]),
                        "described": sum(1 for o in objs if o["description"]), "total": len(objs)})
     return {"name": model["name"], "siteName": model["siteName"], "repo": model["repo"], "generated": model["generated"],
-            "score": results["score"], "failures": results["failures"], "tables": tables}
+            "score": results["score"], "failures": results["failures"], "tables": tables}   # work.json has its own file
 
 
 def write_json(name, data):
@@ -227,10 +228,15 @@ def main():
     write(os.path.join(SECTION, "bus-matrix.md"), bus_matrix(model))
     write(os.path.join(SECTION, "glossary.md"), glossary(model))
     write(os.path.join(DOCS, "rules", "reference.md"), rules_page(results))
-    write_json("summary.json", summary(model, results))
+    work = collect(model, issues)
+    write_json("summary.json", {**summary(model, results), "work": {"items": len(work["items"]), "people": len(work["people"]),
+                                                                     "overlaps": len(work["overlaps"])}})
     write_json("results.json", results)
     write_json("issues.json", issues)
     write_json("gaps.json", gaps(model, settings().get("catalogue_fields")))
+    write_json("work.json", work)
+    print(f"work: {len(work['branches'])} unmerged branches, {len(work['items'])} items, {len(work['overlaps'])} overlaps"
+          + (f". NOTE: {work['note']}" if work["note"] else ""))
     print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rule reference")
 
 

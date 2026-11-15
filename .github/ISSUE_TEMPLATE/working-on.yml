@@ -1,0 +1,25 @@
+name: Working on
+description: Tell the team which tables or report pages you are about to change, so nobody else edits them at the same time.
+title: "Working on: "
+labels: ["working-on"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usually opened from the **Work in progress** page on the docs site, which fills in the list below.
+        The claim shows on that page while this issue is open. Close the issue when your work is merged.
+  - type: textarea
+    id: items
+    attributes:
+      label: Items
+      description: >-
+        One line per table or report page, written as "- Table · TableName" or "- Report page · Page name".
+        Use the names shown on the Work in progress page.
+      placeholder: "- Table · FactSales"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: What you are changing and roughly when you expect to be done.

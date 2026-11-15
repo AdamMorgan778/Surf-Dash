@@ -288,3 +288,10 @@ body {
 .gap-ok { color: var(--work-done); font-weight: 700; }
 .gap-missing { color: var(--sev-error); font-weight: 600; }
 .gap-na { color: var(--md-default-fg-color--lighter); }
+
+/* work in progress */
+.work-free { color: var(--work-done); font-weight: 600; }
+.work-busy { color: var(--md-default-fg-color); }
+.work-stale { color: var(--md-default-fg-color--light); font-style: italic; }
+.rpt-visual.work-overlaps { border-color: var(--sev-warning); border-left-width: 4px; }
+.md-typeset .rpt-more .work-claim { margin-right: 0.5rem; }
