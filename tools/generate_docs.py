@@ -1,13 +1,19 @@
-"""Turn build/*.json and metadata/*.yaml into the markdown pages and data files under docs/."""
+"""Turn build/*.json into the markdown pages and data files under docs/.
+
+The generated pages live in docs/documentation/ (bus matrix, catalogue, glossary, and the dictionary with a page per
+table), so the sidebar shows them as one Documentation section. docs/documentation/index.md is hand-written."""
 import json
 import os
 import shutil
 
 from fetch_issues import match_tables
+from gaps import gaps
 from housekeeping import annotate
-from tmdl import BUILD, ROOT
+from tmdl import BUILD, ROOT, settings
 
 DOCS = os.path.join(ROOT, "docs")
+SECTION = os.path.join(DOCS, "documentation")
+OLD = ["dictionary", "catalogue.md", "bus-matrix.md", "glossary.md"]   # where these pages were before the section existed
 MISSING = "*Missing*"
 
 
@@ -209,18 +215,22 @@ def main():
     model, results, issues = load("model.json"), load("results.json"), load("issues.json")
     match_tables(issues["issues"], [t["name"] for t in model["tables"]])
     annotate(results, issues["issues"])
-    shutil.rmtree(os.path.join(DOCS, "dictionary"), ignore_errors=True)
+    for name in OLD:   # generated files left in a working copy from the old layout would be built as extra pages
+        path = os.path.join(DOCS, name)
+        shutil.rmtree(path, ignore_errors=True) if os.path.isdir(path) else os.path.exists(path) and os.remove(path)
+    shutil.rmtree(os.path.join(SECTION, "dictionary"), ignore_errors=True)
     shutil.rmtree(os.path.join(DOCS, "data"), ignore_errors=True)
-    write(os.path.join(DOCS, "dictionary", "index.md"), dictionary_index(model))
+    write(os.path.join(SECTION, "dictionary", "index.md"), dictionary_index(model))
     for t in model["tables"]:
-        write(os.path.join(DOCS, "dictionary", f"{t['name']}.md"), table_page(t, model, results, issues))
-    write(os.path.join(DOCS, "catalogue.md"), catalogue(model))
-    write(os.path.join(DOCS, "bus-matrix.md"), bus_matrix(model))
-    write(os.path.join(DOCS, "glossary.md"), glossary(model))
+        write(os.path.join(SECTION, "dictionary", f"{t['name']}.md"), table_page(t, model, results, issues))
+    write(os.path.join(SECTION, "catalogue.md"), catalogue(model))
+    write(os.path.join(SECTION, "bus-matrix.md"), bus_matrix(model))
+    write(os.path.join(SECTION, "glossary.md"), glossary(model))
     write(os.path.join(DOCS, "rules", "reference.md"), rules_page(results))
     write_json("summary.json", summary(model, results))
     write_json("results.json", results)
     write_json("issues.json", issues)
+    write_json("gaps.json", gaps(model, settings().get("catalogue_fields")))
     print(f"docs: {len(model['tables'])} table pages, dictionary index, catalogue, bus matrix, glossary, rule reference")
 
 

@@ -283,3 +283,8 @@ body {
 .bar-fill.work-fill-in-progress { background: var(--work-progress); }
 .bar-fill.work-fill-done { background: var(--work-done); }
 .hk-add-all:disabled { cursor: default; opacity: 0.7; }
+
+/* documentation gaps */
+.gap-ok { color: var(--work-done); font-weight: 700; }
+.gap-missing { color: var(--sev-error); font-weight: 600; }
+.gap-na { color: var(--md-default-fg-color--lighter); }

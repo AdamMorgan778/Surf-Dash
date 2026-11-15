@@ -1,5 +1,5 @@
-// Home page: headline tiles, documentation coverage by table, and the issues raised on GitHub.
-// Rule results live in one place, the Rules report; the Rule failures tile links there.
+// Home page: headline tiles and the issues raised on GitHub. Each tile links to the page that owns the detail:
+// documentation gaps are on the Documentation page, rule results on the Rules report.
 (function () {
   var M = window.ModelDocs, el = M.el;
 
@@ -22,7 +22,7 @@
     var count = function (kind) { return tables.filter(function (t) { return t.kind === kind; }).length; };
     var sum = function (key) { return tables.reduce(function (n, t) { return n + t[key]; }, 0); };
     app.appendChild(el("div", { class: "dash-tiles" }, [
-      { label: "Documentation score", value: summary.score.pct + "%", sub: summary.score.described + " of " + summary.score.total + " objects described" },
+      { label: "Documentation score", value: summary.score.pct + "%", sub: el("a", { href: root + "documentation/", text: summary.score.described + " of " + summary.score.total + " objects described. See what is missing" }) },
       { label: "Tables", value: tables.length, sub: count("fact") + " fact, " + count("dimension") + " dimension" },
       { label: "Columns and measures", value: sum("columns") + sum("measures"), sub: sum("measures") + " measures" },
       { label: "Rule failures", value: fails, sub: el("a", { href: root + "rules/", text: f.error + " at error severity. Open the Rules report" }) },
@@ -31,12 +31,6 @@
 
     var canvas = el("div", { class: "rpt-canvas home-canvas" });
     app.appendChild(canvas);
-    M.bars(M.visual(canvas, "Documentation coverage by table", { sub: "Share of each table's visible columns, measures and the table itself that have a description." }),
-      tables.map(function (t) {
-        var pct = t.total ? Math.round(100 * t.described / t.total) : 0;
-        return { label: t.name, value: pct, display: pct + "% (" + t.described + "/" + t.total + ")", href: root + "dictionary/" + t.name + "/" };
-      }), { max: 100, track: true, empty: "The model has no tables." });
-
     var host = M.visual(canvas, "Issues", { sub: "Open issues, and those closed in the last " + (issues.closedDays || 30) + " days." });
     var sort = { key: "number", dir: -1 };
     function table() {

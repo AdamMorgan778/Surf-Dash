@@ -7,5 +7,9 @@ site_name: Surf Analytics model docs
 # *.SemanticModel folder, or the model is in a subfolder. Default: the one *.SemanticModel folder at the top level.
 # model: SurfAnalytics.SemanticModel
 
+# The fields every table should have in metadata/tables.yaml. The Documentation page lists the ones that are missing.
+# Fact tables also need business_process. Default: owner, steward, grain, refresh, sensitivity.
+# catalogue_fields: [owner, steward, grain, refresh, sensitivity]
+
 # How long a closed issue stays on the home page, in days. Default: 30.
 closed_issue_days: 30

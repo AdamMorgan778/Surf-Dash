@@ -21,7 +21,7 @@ Check who can see the site before you publish a real model. A GitHub Pages site 
 | Yours: edit per project | What it holds |
 | --- | --- |
 | `*.SemanticModel/` | The model. Descriptions are the `///` lines above each table, column and measure. |
-| `settings.yml` | Site name, which model folder to read, how long closed issues stay listed. Every key is optional. |
+| `settings.yml` | Site name, which model folder to read, which catalogue fields every table needs, how long closed issues stay listed. Every key is optional. |
 | `rules.json` | Which rules are on, their severity, wording and settings. |
 | `metadata/tables.yaml` | Owner, steward, grain, refresh and sensitivity for each table. |
 | `metadata/glossary.yaml` | Business terms and the fields they relate to. |
@@ -29,7 +29,7 @@ Check who can see the site before you publish a real model. A GitHub Pages site 
 | The template's: replace as a set to upgrade | What it holds |
 | --- | --- |
 | `tools/` | The Python that reads the model, runs the rules and writes the pages. |
-| `docs/assets/`, `docs/index.md`, `docs/guide.md`, `docs/rules/index.md`, `mkdocs.yml` | The site's scripts, styles and hand-written pages. |
+| `docs/assets/`, `docs/index.md`, `docs/guide.md`, `docs/documentation/index.md`, `docs/rules/index.md`, `mkdocs.yml` | The site's scripts, styles and hand-written pages. |
 | `tests/` | Tests for the tools. They read `tests/fixtures/sample`, never your model. |
 | `.github/` | The workflows and issue forms. |
 
@@ -55,7 +55,9 @@ metadata/*.yaml ─────────┘                                  
 GitHub issues ───────────► fetch_issues.py ──► build/issues.json ───────────────────────────────────────┘
 ```
 
-Python works everything out; the scripts in `docs/assets/` only draw it. The site reads three small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table) and `issues.json`.
+Python works everything out; the scripts in `docs/assets/` only draw it. The site reads four small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table), `issues.json` and `gaps.json` (what the documentation is missing, from `tools/gaps.py`).
+
+The sidebar is built from the folders under `docs/`. The generated bus matrix, catalogue, glossary and dictionary are written to `docs/documentation/`, so they appear as one **Documentation** section whose first page is the what-is-missing dashboard.
 
 | Workflow | Runs when | Does |
 | --- | --- | --- |
