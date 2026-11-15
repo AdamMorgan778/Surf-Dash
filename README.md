@@ -47,6 +47,12 @@ python -m venv .venv
 
 To open the sample report in Power BI Desktop, set the `DataFolder` parameter to the full path of the `Data` folder on your machine.
 
+## Editing with Power BI Desktop open
+
+When Claude Code edits the report or model, the `pbi-live-edit` skill (`.claude/skills/pbi-live-edit/`) lets you keep Power BI Desktop open. It checks what Desktop has open, takes screenshots of the affected pages, makes the edit, reloads Desktop, and screenshots again to check the change took, sampling exact colours where it matters. It never reloads while Desktop has unsaved changes; it asks you to save first.
+
+It needs Node.js and the Power BI Desktop bridge CLI (`npm install -g @microsoft/powerbi-desktop-bridge-cli`). `scripts/pbi.ps1` runs the CLI even when Node.js is not on your PATH.
+
 ## How it works
 
 ```
