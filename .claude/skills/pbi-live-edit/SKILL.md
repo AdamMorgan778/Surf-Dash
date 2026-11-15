@@ -38,6 +38,7 @@ Add `--pid <pid>` to every command when more than one Desktop is open. Page ids 
    - If they say to discard the changes instead, that is their call; go on.
    - Otherwise wait for the save in the background: `wait-saved.ps1` (add `-ProcessId <pid>` if needed). It prints `SAVED`, or `TIMED OUT` after 15 minutes. Don't poll by hand.
    - After the save, run `git status`. Desktop often rewrites files when it saves (newer schema versions in `report.json` and `pages.json`, TMDL formatting). Those are the user's changes: leave them as they are, and don't fold them into your edit or revert them.
+   - One exception. Desktop keeps showing what it last loaded, so after a branch switch or a pull it still holds the old content, and a save writes that old content over the newer files. Read the diff after a save: if it undoes work that is already committed (an old colour back, a page missing from `pages.json`, older schema versions), restore those files from git, and tell the user what the save overwrote and that you put it back.
 
 3. **Before screenshots.** Capture the pages the change affects, at `--scale 1`, into the session's scratchpad (a folder such as `pbi_before`), never into the repository. Use `screenshot-all` for report-wide changes (theme, shared measures, page order).
 
