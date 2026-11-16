@@ -9,6 +9,7 @@ import shutil
 from fetch_issues import match_tables
 from gaps import gaps
 from housekeeping import annotate
+from planning import build as build_planning
 from tmdl import BUILD, ROOT, settings
 from work import collect
 
@@ -270,6 +271,9 @@ def main():
                                                                      "overlaps": len(work["overlaps"])}})
     write_json("results.json", results)
     write_json("issues.json", issues)
+    plan = build_planning(issues["issues"], model)
+    write_json("planning.json", plan)
+    print(f"planning: {len(plan['requirements'])} requirements, {plan['totals']['pct']}% complete")
     write_json("gaps.json", gaps(model, settings().get("catalogue_fields")))
     write_json("work.json", work)
     print(f"work: {len(work['branches'])} unmerged branches, {len(work['items'])} items, {len(work['overlaps'])} overlaps"

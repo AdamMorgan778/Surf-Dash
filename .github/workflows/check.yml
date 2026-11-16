@@ -38,6 +38,8 @@ jobs:
         run: for f in docs/assets/*.js; do node --check "$f"; done
       - name: Test the jetski game's physics
         run: node tests/jetski.test.js
+      - name: Test the Planning page's date helpers
+        run: node tests/planning.test.js
       - name: Build the site (not deployed)
         run: python tools/build.py
         env:

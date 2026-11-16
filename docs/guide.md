@@ -6,7 +6,8 @@ This site is generated from the Power BI semantic model in the repository. It is
 
 | Page | Use it to |
 | --- | --- |
-| [Overview](index.md) | See the headline numbers and which issues are open. |
+| [Overview](index.md) | See how the project is going: requirements complete, upcoming deadlines, what is in progress and what was finished recently. |
+| [Planning](planning.md) | See every requirement, who has it and when it is due; add one, break one down, and follow progress on a dashboard and a calendar. |
 | [Work in progress](work.md) | See which tables, columns, measures and report pages someone is already changing, before you start on them. |
 | [Documentation](documentation/index.md) | See what the documentation is missing: descriptions, catalogue fields and broken glossary references. |
 | [Data dictionary](documentation/dictionary/index.md) | Look up a column or measure: its type, format, description and DAX. Each table has its own page, which also shows what every measure depends on. |
@@ -72,9 +73,27 @@ Work that is only on your own computer can't be seen. So when you start somethin
 
 **Overlaps** at the top of the page lists anything in more than one person's hands. A few shared files (the report's settings, page order and theme, and the model's settings) are changed by many kinds of edit, so two branches touching one of them is flagged even when the edits look unrelated.
 
-## Ask for a change
+## Planning
 
-For anything that is not clean-up (a new measure, a definition change, a data problem, a question), open a **Model request** issue on GitHub. Name the table so the request shows against it on the Overview page.
+A requirement is something the model or report needs to do, with a person and a completion date. Each one is an issue on GitHub; the [Planning](planning.md) page shows them and its buttons open the right place on GitHub.
+
+| To | Do this |
+| --- | --- |
+| Add a requirement | Press **Add requirement**, fill in the short form (the due date has a date picker) and press **Continue on GitHub**, then **Submit** there. |
+| Assign it | Type a GitHub username under **Assign to** when adding it, or set the assignee on the issue later. |
+| Take it out | Open the requirement on GitHub and choose **Development, Create a branch**. Within a minute or two the site shows who took it out, when, and on which branch. You are assigned automatically if nobody was. |
+| Complete it | Merge the branch's pull request. The requirement is closed as completed and shows as **Complete**. |
+| Say it wasn't satisfied | Open the completed requirement on GitHub and press **Reopen issue**. It shows as **Reopened** and no longer counts as complete. |
+| Break it down | Expand the requirement and press **Add sub-requirement**. Each part has its own person, date and branch. The parent completes when its last part does, and reopens if a part is reopened. |
+| Drop it | Close the issue as **not planned**. It is left out of the percentage. |
+
+The page has three tabs:
+
+- **Dashboard** shows the percentage complete, what is overdue or due in the next 14 days, completion by person, and what is still to do by month.
+- **Requirements** lists them with who has each, the due date, the status and how many parts are done. Expand one for its acceptance criteria and sub-requirements.
+- **Calendar** shows the due dates month by month; click one to open the requirement.
+
+Percentage complete counts the smallest pieces of work: a requirement that has been broken down is counted through its sub-requirements. Write due dates as `2026-12-01`; a date the site can't read is flagged rather than ignored.
 
 ## Pull requests
 
