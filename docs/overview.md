@@ -1,5 +1,11 @@
-# Overview
+---
+title: Overview
+search:
+  exclude: true
+---
 
-State of the semantic model: how well it is documented, how many rules it breaks, and what has been raised on GitHub. New here? Read [Using this site](guide.md).
+<!-- The Overview used to live here; it is now the site's front page. This sends old links and bookmarks there. -->
+<meta http-equiv="refresh" content="0; url=../">
+<script>location.replace("../" + location.hash);</script>
 
-<div id="home-app" data-root="../">Loading…</div>
+The Overview has moved to the [front page](index.md).

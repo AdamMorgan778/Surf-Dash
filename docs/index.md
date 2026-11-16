@@ -1,24 +1,5 @@
----
-title: Home
-hide:
-  - navigation
-  - toc
----
+# Overview
 
-# Home
+State of the semantic model: how well it is documented, how many rules it breaks, and what has been raised on GitHub. New here? Read [Using this site](guide.md).
 
-<div id="barrel-ride" data-root=""></div>
-
-<div class="barrel-explore" markdown="1">
-
-## Explore
-
-- [Overview](overview.md) The headline numbers and the issues raised on GitHub.
-- [Work in progress](work.md) Who is changing which tables, measures and report pages.
-- [Documentation](documentation/index.md) What is described, and what is still missing.
-- [Data dictionary](documentation/dictionary/index.md) Every table, column and measure.
-- [Best practice](rules/index.md) Which modelling rules the model breaks, and how to fix them.
-- [Play](play/index.md) Race a jetski over the waves.
-- [Using this site](guide.md) How the pages work and how to raise work.
-
-</div>
+<div id="home-app" data-root="">Loading…</div>

@@ -6,8 +6,7 @@ This site is generated from the Power BI semantic model in the repository. It is
 
 | Page | Use it to |
 | --- | --- |
-| [Home](index.md) | Scroll through the barrel for the headline numbers, each linking to its page. |
-| [Overview](overview.md) | See the headline numbers and which issues are open. |
+| [Overview](index.md) | See the headline numbers and which issues are open. |
 | [Work in progress](work.md) | See which tables, columns, measures and report pages someone is already changing, before you start on them. |
 | [Documentation](documentation/index.md) | See what the documentation is missing: descriptions, catalogue fields and broken glossary references. |
 | [Data dictionary](documentation/dictionary/index.md) | Look up a column or measure: its type, format, description and DAX. Each table has its own page, which also shows what every measure depends on. |

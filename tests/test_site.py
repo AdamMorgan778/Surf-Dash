@@ -37,3 +37,16 @@ def test_footer_line_names_the_actions_run():
     assert '<time class="site-built" datetime="2026-11-15T14:35:00Z">2026-11-15 14:35 UTC</time>' in line
     assert '<a href="https://github.com/o/r/actions/runs/99">GitHub Actions run 57</a>' in line
     assert build.built_line(now, {}).startswith("Built locally <time")
+
+
+def test_asset_links_get_a_version_stamp(tmp_path):
+    import mkdocs_hooks
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "app.js").write_text("one", encoding="utf-8")
+    html = ('<script src="../assets/app.js"></script><link href="assets/app.js" rel="stylesheet">'
+            '<script src="assets/javascripts/bundle.f00.min.js"></script>')
+    once = mkdocs_hooks.stamp(html, str(tmp_path))
+    assert once.count("app.js?v=") == 2
+    assert "bundle.f00.min.js\"" in once                 # files not in the docs folder are left alone
+    (tmp_path / "assets" / "app.js").write_text("two", encoding="utf-8")
+    assert mkdocs_hooks.stamp(html, str(tmp_path)) != once  # a changed file gets a new address
