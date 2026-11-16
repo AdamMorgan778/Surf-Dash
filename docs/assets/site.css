@@ -71,10 +71,17 @@ body[data-md-color-scheme="slate"] {
 [data-md-color-scheme="slate"] .md-footer::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 9h54V6c-9 0-9-6-18-6S27 6 18 6 9 0 0 0z' fill='%23082c41'/%3E%3C/svg%3E"); }
 .md-main__inner { margin-top: 2rem; }
 
-/* One page width on every page, so the sidebar never shifts sideways between pages. Pages without a table of
-   contents give the freed space to their content. */
-.md-grid { max-width: 76rem; }
+/* The sidebar sits at the left edge of the window on every page and at every width, so it never shifts between
+   pages or floats part-way across a wide screen. The content takes the rest: it has a maximum width and is centred
+   in the space to the right of the sidebar, together with the table of contents on the pages that have one. */
 .md-content { min-width: 0; }
+@media screen and (min-width: 76.25em) {
+  .md-grid { max-width: none; }
+  .md-main__inner { margin-left: 0.6rem; margin-right: 0.6rem; }
+  .md-content { max-width: 82rem; margin-left: auto; margin-right: auto; }
+  .md-main__inner:has(.md-sidebar--secondary:not([hidden])) .md-content { max-width: 54rem; margin-right: 0; }
+  .md-sidebar--secondary:not([hidden]) { margin-right: auto; }
+}
 
 /* type: tighter, heavier headings in ocean navy */
 .md-typeset h1 { font-weight: 700; letter-spacing: -0.02em; color: var(--ocean); margin-bottom: 0.6em; }
