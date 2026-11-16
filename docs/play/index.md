@@ -5,9 +5,9 @@ hide:
 
 # Play
 
-Ride the waves, launch off the crests and race to the finish line. When you cross it the course starts again, forever.
+Ride the waves, launch off the crests and race to the finish line.
 
-<div id="jetski-game" data-root="../">The game needs JavaScript. Loading…</div>
+<div id="jetski-game" data-root="../" data-kicker="Arcade">The game needs JavaScript. Loading…</div>
 
 <div class="jetski-help" markdown="1">
 

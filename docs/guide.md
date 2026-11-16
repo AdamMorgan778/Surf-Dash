@@ -6,7 +6,7 @@ This site is generated from the Power BI semantic model in the repository. It is
 
 | Page | Use it to |
 | --- | --- |
-| [Overview](index.md) | See how the project is going: requirements complete, upcoming deadlines, what is in progress and what was finished recently. |
+| [Overview](index.md) | See how the project is going at a glance: requirements complete, documentation and best practice scores, the next deadlines and what was finished recently. |
 | [Planning](planning.md) | See every requirement, who has it and when it is due; add one, break one down, and follow progress on a dashboard and a calendar. |
 | [Work in progress](work.md) | See which tables, columns, measures and report pages someone is already changing, before you start on them. |
 | [Documentation](documentation/index.md) | See what the documentation is missing: descriptions, catalogue fields and broken glossary references. |

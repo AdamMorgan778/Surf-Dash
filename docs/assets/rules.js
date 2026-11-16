@@ -59,7 +59,7 @@
   function commit(push) { history[push ? "pushState" : "replaceState"](null, "", address()); render(); }
   function setFilter(key, value) { if (value) state[key] = value; else delete state[key]; commit(false); }
   function toggle(key, value) { setFilter(key, state[key] === value ? "" : value); }
-  function setView(id) { if (id !== view) { view = id; commit(true); window.scrollTo({ top: ui.header.offsetTop - 60 }); } }
+  function setView(id) { if (id !== view) { view = id; commit(true); } }
 
   // ---- what is in scope. `except` lists filters to ignore, so a chart can show every value of its own dimension.
   function on(key, except) { return state[key] && (except || []).indexOf(key) === -1; }
@@ -99,23 +99,21 @@
   function buildShell() {
     clear(app);
     document.body.classList.add("report-mode");
-    ui.header = el("div", { class: "rpt-header" });
+    // tabs, filters and the chips for the filters in use sit in the page banner (or above the page if there is none)
+    var bar = M.heroControls() || app.appendChild(el("div", { class: "surf-hero-controls" }));
     var selects = el("div", { class: "rpt-slicers", role: "group", "aria-label": "Report filters" });
     ui.selects = {};
     [["category", uniq(results.rules.map(function (r) { return r.category; })).sort()],
      ["severity", SEVS.map(function (s) { return s.id; })],
      ["table", uniq(results.counts.map(function (c) { return c.table; })).sort(sortTables)],
      ["work", WORK.map(function (w) { return w.id; })]].forEach(function (d) {
-      var key = d[0], sel = el("select", { id: "rf-" + key }, [el("option", { value: "", text: "All" })]);
+      var key = d[0], sel = el("select", { id: "rf-" + key, "aria-label": LABEL[key] }, [el("option", { value: "", text: LABEL[key] + ": All" })]);
       d[1].forEach(function (v) { sel.appendChild(el("option", { value: v, text: valueLabel(key, v) })); });
       sel.addEventListener("change", function () { setFilter(key, sel.value); });
       ui.selects[key] = sel;
-      selects.appendChild(el("label", {}, [LABEL[key], sel]));
+      selects.appendChild(sel);
     });
     ui.chips = el("div", { class: "rules-chips" });
-    ui.header.appendChild(el("div", { class: "rpt-header-row" }, [selects]));
-    ui.header.appendChild(el("div", { class: "rpt-chip-row" }, [ui.chips, el("div", { class: "rpt-stamp", text: "Model read " + results.generated })]));
-    app.appendChild(ui.header);
 
     ui.tabs = el("div", { class: "rpt-tabs", role: "tablist", "aria-label": "Report pages" });
     ui.tabButtons = {};
@@ -131,7 +129,7 @@
       ui.tabButtons[v.id] = b;
       ui.tabs.appendChild(b);
     });
-    app.appendChild(ui.tabs);
+    bar.appendChild(ui.tabs); bar.appendChild(selects); bar.appendChild(ui.chips);
     ui.canvas = el("div", { class: "rpt-canvas", id: "rpt-canvas", role: "tabpanel" });
     app.appendChild(ui.canvas);
 
@@ -148,9 +146,6 @@
     Object.keys(ui.selects).forEach(function (k) { ui.selects[k].value = state[k] || ""; });
     clear(ui.chips);
     var active = FILTERS.filter(function (k) { return state[k]; });
-    if (!active.length) {
-      ui.chips.appendChild(el("span", { class: "rpt-hint", text: "Click any bar or tile to filter every tab. Click it again to clear." }));
-    }
     active.forEach(function (k) {
       ui.chips.appendChild(el("button", { type: "button", class: "rules-chip", title: "Remove this filter", onclick: function () { setFilter(k, ""); } },
         [LABEL[k] + ": " + valueLabel(k, state[k]) + " ", el("span", { "aria-hidden": "true", text: "×" })]));

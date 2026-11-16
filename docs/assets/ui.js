@@ -1,5 +1,5 @@
-// Shared parts for the home page (home.js) and the Best practice report (rules.js, housekeeping.js): DOM helpers, tiles, bars,
-// visual cards, sortable tables and data loading. Both pages are built from these, so they look and behave the same.
+// Shared parts for the home page (home.js) and the Best practice report (rules.js, housekeeping.js): DOM helpers, the page
+// banner, tiles, bars, visual cards, sortable tables and data loading. Both pages are built from these, so they look and behave the same.
 // Anything with logic (rule results, counts, housekeeping status) is worked out in Python; the scripts only draw it.
 window.ModelDocs = (function () {
   var SEVS = [
@@ -39,9 +39,10 @@ window.ModelDocs = (function () {
   function sevIcon(id) { return el("span", { class: "bar-icon sev-" + id, text: SEVS[SEV_ORDER[id]].icon, "aria-hidden": "true" }); }
   function sevChip(id) { return el("span", { class: "sev-chip" }, [sevIcon(id), " " + SEVS[SEV_ORDER[id]].label]); }
 
-  // ---- tile: {label, value, sub, sev, onClick, dim, on}. `label` and `sub` may be text or a node.
+  // ---- tile: {label, value, sub, sev, tone, onClick, dim, on}. `label` and `sub` may be text or a node.
+  // tone (ocean, teal, orange, coral, amber, slate) sets the tile's colour; without one it follows the tile's position.
   function tile(t) {
-    var node = el("div", { class: "dash-tile" + (t.onClick ? " tile-click" : "") + (t.dim ? " is-dim" : "") + (t.on ? " is-on" : "") }, [
+    var node = el("div", { class: "dash-tile" + (t.tone ? " tone-" + t.tone : "") + (t.onClick ? " tile-click" : "") + (t.dim ? " is-dim" : "") + (t.on ? " is-on" : "") }, [
       el("div", { class: "tile-label" }, [t.sev ? sevIcon(t.sev) : null, t.label]),
       el("div", { class: "tile-value", text: String(t.value) }),
       el("div", { class: "tile-sub" }, [t.sub])]);
@@ -166,6 +167,50 @@ window.ModelDocs = (function () {
     });
   }
   function ready(fn) { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn); else fn(); }
+
+  // ---- banner: every page's title and opening line sit in an ocean banner with waves along its bottom edge, and
+  // the page's content floats over the wave line. Built here from the page's own <h1> and first paragraph, so the
+  // Markdown stays plain. A page's script adds its tabs and filters with heroControls().
+  //   data-kicker="…" on any element in the page sets the small line above the title; pages inside a section get
+  //   the section's name. data-hero="sun" adds the sun (the Overview).
+  var WAVES = '<svg class="surf-waves" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path d="M0 60 C120 20 220 20 330 55 S560 100 680 60 S880 20 1000 50 V120 H0Z" fill="#67e8f9" opacity=".45"/>' +
+    '<path d="M0 80 C140 45 260 50 380 78 S620 112 760 82 S920 55 1000 72 V120 H0Z" fill="#a5f3fc" opacity=".6"/>' +
+    '<path class="surf-shore" d="M0 100 C160 80 300 84 440 98 S700 118 840 100 S960 88 1000 96 V120 H0Z"/></svg>';
+  var controls = null;
+  function sectionName(title) {
+    var item = document.querySelector(".md-nav--primary > .md-nav__list > .md-nav__item--nested.md-nav__item--active");
+    var label = item && item.querySelector(".md-ellipsis");
+    var name = label ? label.textContent.trim() : "";
+    return name && name !== title.trim() ? name : "";
+  }
+  function initHero() {
+    var article = document.querySelector("article.md-content__inner"), h1 = article && article.querySelector(":scope > h1");
+    if (!h1) return;
+    var text = el("div", { class: "surf-hero-text" }), box = el("header", { class: "surf-hero" }, [text]);
+    article.insertBefore(box, h1);
+    var kick = article.querySelector("[data-kicker]"), label = kick ? kick.getAttribute("data-kicker") : sectionName(h1.textContent);
+    if (label) text.appendChild(el("p", { class: "surf-kicker", text: label }));
+    text.appendChild(h1);
+    for (var lead = false, n = box.nextElementSibling; n && n.tagName === "P"; n = box.nextElementSibling) {
+      if (n.classList.contains("doc-crumb")) { text.appendChild(n); continue; }
+      if (lead || n.className) break;
+      n.className = "surf-lead"; text.appendChild(n); lead = true;
+    }
+    if (article.querySelector('[data-hero="sun"]')) box.insertBefore(el("div", { class: "surf-sky", "aria-hidden": "true" }, [el("span", { class: "surf-sun" })]), text);
+    controls = el("div", { class: "surf-hero-controls" });
+    box.appendChild(controls);
+    box.insertAdjacentHTML("beforeend", WAVES);
+    // pages of text and tables (no script-drawn app) sit on one white sheet
+    if (!article.querySelector("[data-root]")) {
+      var sheet = el("div", { class: "surf-sheet" });
+      while (box.nextSibling) sheet.appendChild(box.nextSibling);
+      article.appendChild(sheet);
+    }
+    document.body.classList.add("has-hero");
+  }
+  function heroControls() { return controls; }
+  ready(initHero);
   // A <select class="doc-switch"> goes to the page its chosen option names (the table switcher on dictionary pages).
   function initSwitches() {
     document.querySelectorAll("select.doc-switch").forEach(function (s) {
@@ -178,5 +223,5 @@ window.ModelDocs = (function () {
 
   return { SEVS: SEVS, SEV_ORDER: SEV_ORDER, el: el, clear: clear, cap: cap, uniq: uniq, plural: plural, clickable: clickable,
            tableLabel: tableLabel, sevIcon: sevIcon, sevChip: sevChip, tile: tile, visual: visual, bars: bars, sortable: sortable,
-           load: load, ready: ready };
+           load: load, ready: ready, heroControls: heroControls };
 })();

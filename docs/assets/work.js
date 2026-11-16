@@ -26,8 +26,6 @@
   function draw(app, work) {
     M.clear(app);
     var picked = {};   // "kind|name" -> true, the areas ticked for a claim
-    app.appendChild(el("p", { class: "dash-note", text: "Built " + work.generated + ". Work that has not been pushed to GitHub does not show here; claim what you are about to change." +
-      (work.note ? " " + work.note : "") }));
     var objects = work.items.filter(function (i) { return i.source !== "claim"; }).length;
     app.appendChild(el("div", { class: "dash-tiles" }, [
       { label: "Unmerged branches", value: work.branches.length, sub: "with changes to the model or report" },
@@ -119,6 +117,8 @@
       { height: "40rem", onSort: drawAll, empty: work.items.length ? "Nothing matches the search." : "Nothing is being worked on: no unmerged branches, housekeeping fixes in progress or claims." });
     }
     drawAll();
+    app.appendChild(el("p", { class: "rpt-hint work-note", text: "Work that has not been pushed to GitHub does not show here, so claim what you are about to change." +
+      (work.note ? " " + work.note : "") }));
   }
 
   M.ready(function () {

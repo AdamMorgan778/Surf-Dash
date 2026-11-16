@@ -8,7 +8,6 @@
     var c = gaps.counts, tables = summary.tables;
     function tableLink(name) { return name ? el("a", { href: "dictionary/" + name + "/", text: name }) : "Whole model"; }
 
-    app.appendChild(el("p", { class: "dash-note", text: "Model read " + summary.generated + "." }));
     app.appendChild(el("div", { class: "dash-tiles" }, [
       { label: "Documentation score", value: c.score.pct + "%", sub: c.score.described + " of " + c.score.total + " objects described" },
       { label: "Missing descriptions", value: c.descriptions, sub: "tables, visible columns and measures" },
