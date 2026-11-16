@@ -4,6 +4,10 @@
 //     assets/surf-coast.json (built once by tools/art/surf_coast.py).
 //   - The forecast is fetched by the browser from Open-Meteo each time the page is opened (no key needed), so it is
 //     always current. That is why the scoring is here and not in Python: it has to run on live data.
+//   - Find a session suggests the three best sessions this week for the chosen level and priorities, marking
+//     forecasts further ahead as less certain.
+//   - The map layers (wind, swell, rain, temperature) are drawn by surf-layers.js from a grid of forecast points,
+//     fetched the first time a layer is switched on.
 // The scoring functions at the top have no browser dependencies, so tests/surf.test.js runs them in Node.
 (function () {
   "use strict";
@@ -138,7 +142,63 @@
              trend: num(next) ? (next > heights[t] ? "rising" : "falling") : num(prev) ? (heights[t] > prev ? "rising" : "falling") : "" };
   }
 
-  var pure = { LEVELS: LEVELS, BANDS: BANDS, angleDiff: angleDiff, compass: compass, directionFactor: directionFactor, periodFactor: periodFactor,
+  // ---- choosing a session
+  // What someone can ask for on top of the level score. Each is a preference, not a filter.
+  var PRIORITIES = [
+    { id: "lightwind", label: "Light wind" }, { id: "clean", label: "Clean waves" }, { id: "dry", label: "Dry" },
+    { id: "warm", label: "Warmer" }, { id: "smaller", label: "Smaller waves" }, { id: "bigger", label: "Bigger waves" }
+  ];
+  // How well one hour meets one priority: 1 fully, down to 0.2 not at all. The hour's score is multiplied by it.
+  //   h: {windSpeed (mph), side, rain (mm an hour), air (°C), airRange: [coldest, warmest of the week], feet}
+  function priorityFit(id, h, level) {
+    var s = level.size;
+    if (id === "lightwind") return 1 - 0.8 * ramp(h.windSpeed || 0, 8, 25);
+    if (id === "clean") return (h.windSpeed || 0) <= 5 || h.side === "offshore" ? 1 : h.side === "cross-shore" ? 0.6 : 0.2;
+    if (id === "dry") return !num(h.rain) || h.rain < 0.1 ? 1 : h.rain < 1 ? 0.6 : 0.3;
+    if (id === "warm") return num(h.air) && h.airRange && h.airRange[1] > h.airRange[0] ? 0.6 + 0.4 * ramp(h.air, h.airRange[0], h.airRange[1]) : 1;
+    if (id === "smaller") return 1 - 0.6 * ramp(h.feet, s[1], s[2]);
+    if (id === "bigger") return 0.4 + 0.6 * ramp(h.feet, s[1], s[2]);
+    return 1;
+  }
+  // How far a forecast can be trusted, by how many days ahead it is. A rule of thumb, not a probability: the
+  // forecast service's alternative runs agree closely for a day or two and spread widely by the end of the week.
+  function certainty(daysAhead) {
+    return daysAhead <= 2 ? { label: "High", factor: 1 } : daysAhead <= 4 ? { label: "Medium", factor: 0.85 } : { label: "Low", factor: 0.7 };
+  }
+  // The sessions to suggest, best first. For each spot and day still to come, the best daylight hour and the hours
+  // either side that are nearly as good make one session; sessions are ranked by how well they match, marked down
+  // for being further ahead, and no more than two come from the same day (unless one day was asked for).
+  //   spots: [{match: [per hour], daylight: [per hour]}], days: [{from, to}], now: this hour's index
+  //   opts: {count (3), day (index into days, or null for any)}
+  //   -> [{spot, day, from, to (one past the last hour), peak, match, rank, daysAhead, certainty}]
+  function findSessions(spots, days, now, opts) {
+    opts = opts || {};
+    var oneDay = typeof opts.day === "number", today = 0, all = [];
+    days.forEach(function (d, i) { if (now >= d.from && now < d.to) today = i; });
+    spots.forEach(function (s, si) {
+      days.forEach(function (d, di) {
+        if (d.to <= now || (oneDay && opts.day !== di)) return;
+        var from = Math.max(d.from, now), peak = -1;
+        for (var h = from; h < d.to; h++) if (s.daylight[h] && (peak < 0 || s.match[h] > s.match[peak])) peak = h;
+        if (peak < 0 || !(s.match[peak] > 0)) return;
+        function good(h) { return h >= from && h < d.to && s.daylight[h] && s.match[h] >= 0.85 * s.match[peak]; }
+        var a = peak, b = peak + 1;
+        while (good(a - 1)) a--;
+        while (good(b)) b++;
+        var c = certainty(di - today);
+        all.push({ spot: si, day: di, from: a, to: b, peak: peak, match: s.match[peak], rank: s.match[peak] * c.factor, daysAhead: di - today, certainty: c.label });
+      });
+    });
+    all.sort(function (x, y) { return y.rank - x.rank || x.peak - y.peak || x.spot - y.spot; });
+    var out = [], taken = {};
+    all.forEach(function (x) {
+      if (out.length >= (opts.count || 3) || (!oneDay && (taken[x.day] || 0) >= 2)) return;
+      taken[x.day] = (taken[x.day] || 0) + 1; out.push(x);
+    });
+    return out;
+  }
+
+  var pure = { LEVELS: LEVELS, BANDS: BANDS, PRIORITIES: PRIORITIES, priorityFit: priorityFit, certainty: certainty, findSessions: findSessions, angleDiff: angleDiff, compass: compass, directionFactor: directionFactor, periodFactor: periodFactor,
                surfHeight: surfHeight, windSide: windSide, windFactor: windFactor, sizeFactor: sizeFactor, surfRange: surfRange, assess: assess,
                tideState: tideState, seaPoint: seaPoint, projection: projection, londonHour: londonHour, dayName: dayName, fmtHour: fmtHour, bestHour: bestHour };
   if (typeof module === "object" && module.exports) module.exports = pure;
@@ -147,10 +207,13 @@
   // =====================================================================================================  the page
   var M = window.ModelDocs, el = M.el, clear = M.clear;
   var MARINE = "https://marine-api.open-meteo.com/v1/marine", WEATHER = "https://api.open-meteo.com/v1/forecast";
-  var PAST_DAYS = 3, AHEAD_DAYS = 8, SEA_KM = 3, CACHE = "surf-forecast-v1", CACHE_MINUTES = 30, W = 1000;
+  var PAST_DAYS = 3, AHEAD_DAYS = 8, SEA_KM = 3, CACHE = "surf-forecast-v2", CACHE_MINUTES = 30, W = 1000;
+  var LAYERS = [{ id: "wind", label: "Wind" }, { id: "swell", label: "Swell" }, { id: "rain", label: "Rain" }, { id: "temp", label: "Temperature" }];
+  var GRID = { cols: 8, rows: 7 }, GRID_CACHE = "surf-grid-v1";   // the forecast points behind the layers: about 10 km apart
+  var grid = null, gridLoading = false, gridError = "";
   var app, root, spots, coast, places, proj;
   var data = null;            // {hours: [...], now, days: [{label, from, to}], spots: [{c: [per hour], daylight, sea, tide, air, gust, a: {level: [assessments]}}]}
-  var state = { level: "beginner", spot: null, t: 0, timeSet: false };
+  var state = { level: "beginner", spot: null, t: 0, timeSet: false, want: [], wantDay: "", layers: {} };
   var view = { x: 0, y: 0, w: W, h: 0, zoom: 1 }, ui = {}, timer = null;
 
   function svg(tag, attrs, children) {
@@ -171,12 +234,19 @@
     else { try { var saved = localStorage.getItem("surf-level"); if (LEVELS.some(function (l) { return l.id === saved; })) state.level = saved; } catch (e) { /* no storage */ } }
     if (spotIndex(p.get("spot")) !== -1) state.spot = p.get("spot");
     state.wantTime = p.get("t");
+    state.want = (p.get("want") || "").split(",").filter(function (id) { return PRIORITIES.some(function (x) { return x.id === id; }); });
+    state.wantDay = /^\d{4}-\d\d-\d\d$/.test(p.get("day") || "") ? p.get("day") : "";
+    (p.get("layers") || "").split(",").forEach(function (id) { if (LAYERS.some(function (l) { return l.id === id; })) state.layers[id] = true; });
   }
+  function layersOn() { return LAYERS.filter(function (l) { return state.layers[l.id]; }); }
   function writeState() {
     var p = new URLSearchParams();
     p.set("level", state.level);
     if (state.spot) p.set("spot", state.spot);
     if (data && state.timeSet) p.set("t", data.hours[state.t]);
+    if (state.want.length) p.set("want", state.want.join(","));
+    if (state.wantDay) p.set("day", state.wantDay);
+    if (layersOn().length) p.set("layers", layersOn().map(function (l) { return l.id; }).join(","));
     history.replaceState(null, "", location.pathname + "?" + p.toString());
     try { localStorage.setItem("surf-level", state.level); } catch (e) { /* no storage */ }
   }
@@ -189,6 +259,7 @@
   }
   function getJson(url) {
     return fetch(url).then(function (r) {
+      if (r.status === 429) throw new Error("the forecast service has had too many requests from here; wait a minute");
       if (!r.ok) throw new Error("the forecast service answered " + r.status);
       return r.json();
     });
@@ -201,7 +272,7 @@
     return Promise.all([
       getJson(query(MARINE, spots.map(function (s) { return seaPoint(s, SEA_KM); }),
         ["swell_wave_height", "swell_wave_direction", "swell_wave_period", "wind_wave_height", "wind_wave_direction", "sea_surface_temperature", "sea_level_height_msl"])),
-      getJson(query(WEATHER, spots, ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "temperature_2m", "is_day"], "&wind_speed_unit=mph"))
+      getJson(query(WEATHER, spots, ["wind_speed_10m", "wind_direction_10m", "wind_gusts_10m", "temperature_2m", "precipitation", "is_day"], "&wind_speed_unit=mph"))
     ]).then(function (d) {
       var out = { at: Date.now(), ids: spots.map(function (s) { return s.id; }).join(), marine: [].concat(d[0]), weather: [].concat(d[1]) };
       try { sessionStorage.setItem(CACHE, JSON.stringify(out)); } catch (e) { /* too big or no storage: fetch again next time */ }
@@ -219,7 +290,9 @@
     var now = hours.indexOf(londonHour(new Date()));
     if (now < 0) now = Math.min(n - 1, PAST_DAYS * 24);
     days.forEach(function (d) { d.label = now >= d.from && now < d.to ? "Today" : dayName(d.date); d.past = d.to <= now; });
-    return { hours: hours, now: now, days: days, fetched: raw.at, spots: spots.map(function (s, i) {
+    var cold = Infinity, warm = -Infinity;   // the coldest and warmest air from now on, for the Warmer priority
+    raw.weather.forEach(function (w) { for (var h = now; h < n; h++) { var v = w.hourly.temperature_2m[h]; if (num(v)) { cold = Math.min(cold, v); warm = Math.max(warm, v); } } });
+    return { hours: hours, now: now, days: days, fetched: raw.at, airRange: [cold, warm], spots: spots.map(function (s, i) {
       var m = raw.marine[i].hourly, w = raw.weather[i].hourly, c = [], a = {};
       for (var h = 0; h < n; h++) {
         c.push({ swellHeight: m.swell_wave_height[h], swellDirection: m.swell_wave_direction[h], swellPeriod: m.swell_wave_period[h],
@@ -227,7 +300,8 @@
                  windSpeed: w.wind_speed_10m[h], windDirection: w.wind_direction_10m[h] });
       }
       LEVELS.forEach(function (l) { a[l.id] = c.map(function (x) { return assess(x, s.faces, l); }); });
-      return { c: c, a: a, daylight: w.is_day, sea: m.sea_surface_temperature, tide: m.sea_level_height_msl, air: w.temperature_2m, gust: w.wind_gusts_10m };
+      return { c: c, a: a, daylight: w.is_day, sea: m.sea_surface_temperature, tide: m.sea_level_height_msl, air: w.temperature_2m, gust: w.wind_gusts_10m,
+               rain: w.precipitation || [] };
     }) };
   }
   function dayOf(t) { for (var i = 0; i < data.days.length; i++) if (t < data.days[i].to) return data.days[i]; return data.days[data.days.length - 1]; }
@@ -269,22 +343,34 @@
       ["pointerleave", "blur"].forEach(function (ev) { g.addEventListener(ev, hideTip); });
       return g;
     });
-    ui.svg = svg("svg", { class: "surf-map", role: "group", "aria-label": "Map of the Pembrokeshire coast with " + spots.length + " surf spots" }, [
+    // two drawings, one on top of the other, with the weather layers' canvases between them: the sea and land
+    // underneath; the place names, markers and a faint coastline (for when a layer covers the land) on top
+    ui.base = svg("svg", { class: "surf-map surf-map-base", "aria-hidden": "true" }, [
       svg("defs", {}, [svg("linearGradient", { id: "surf-sea", x1: "0", y1: "0", x2: "1", y2: "1" },
         [svg("stop", { offset: "0", class: "surf-sea-a" }), svg("stop", { offset: "0.55", class: "surf-sea-b" }), svg("stop", { offset: "1", class: "surf-sea-c" })])]),
       svg("rect", { class: "surf-sea", x: -W, y: -W, width: 3 * W, height: 3 * W, fill: "url(#surf-sea)" }),
-      edge, land, labels, svg("g", { class: "surf-spots" }, ui.markers)]);
+      edge, land]);
+    ui.svg = svg("svg", { class: "surf-map surf-map-top", role: "group", "aria-label": "Map of the Pembrokeshire coast with " + spots.length + " surf spots" }, [
+      svg("rect", { class: "surf-hit", x: -W, y: -W, width: 3 * W, height: 3 * W }),
+      svg("g", { class: "surf-coast-top", "aria-hidden": "true" }, coast.land.map(function (c) { return svg("path", { d: landPath(c.rings) }); })),
+      labels, svg("g", { class: "surf-spots" }, ui.markers)]);
+    ui.read = el("div", { class: "surf-read", hidden: "" });
     ui.tip = el("div", { class: "surf-tip", hidden: "" });
     ui.hint = el("div", { class: "surf-hint", hidden: "", text: "Hold Ctrl and scroll to zoom" });
     ui.status = el("div", { class: "surf-status", role: "status", text: "Loading the forecast…" });
     ui.dial = el("div", { class: "surf-dial", hidden: "" });
     function zoomButton(label, text, fn) { return el("button", { type: "button", class: "surf-zoom-btn", "aria-label": label, title: label, text: text, onclick: fn }); }
     ui.wrap = el("div", { class: "surf-map-wrap", style: "aspect-ratio:" + W + "/" + proj.height.toFixed(0) }, [
-      ui.svg, ui.dial, ui.status, ui.tip, ui.hint,
+      ui.base, ui.svg, ui.dial, ui.read, ui.status, ui.tip, ui.hint,
       el("div", { class: "surf-zoom" }, [
         zoomButton("Zoom in", "+", function () { zoomBy(1.6); }), zoomButton("Zoom out", "−", function () { zoomBy(1 / 1.6); }),
         zoomButton("Show the whole coast", "⤢", function () { setView(0, 0, 1); })])]);
     host.appendChild(ui.wrap);
+    if (M.surfLayers) {
+      var rings = [];
+      coast.land.forEach(function (c) { c.rings.forEach(function (r) { rings.push(r.map(function (p) { return proj.point(p[0], p[1]); })); }); });
+      ui.layers = M.surfLayers({ host: ui.wrap, before: ui.svg, width: W, height: proj.height, land: rings });
+    }
 
     // drag to pan, Ctrl + wheel or double-click to zoom
     var drag = null;
@@ -294,11 +380,12 @@
       ui.svg.setPointerCapture(e.pointerId); ui.wrap.classList.add("is-dragging");
     });
     ui.svg.addEventListener("pointermove", function (e) {
-      if (!drag) return;
+      if (!drag) { readAt(e); return; }
       var k = view.w / ui.wrap.clientWidth;
       setView(drag.vx - (e.clientX - drag.x) * k, drag.vy - (e.clientY - drag.y) * k, view.zoom);
     });
     ["pointerup", "pointercancel"].forEach(function (ev) { ui.svg.addEventListener(ev, function () { drag = null; ui.wrap.classList.remove("is-dragging"); }); });
+    ui.svg.addEventListener("pointerleave", function () { ui.read.hidden = true; });
     ui.wrap.addEventListener("wheel", function (e) {
       if (!e.ctrlKey) { ui.hint.hidden = false; clearTimeout(ui.hintTimer); ui.hintTimer = setTimeout(function () { ui.hint.hidden = true; }, 1400); return; }
       e.preventDefault();
@@ -311,7 +398,8 @@
   function setView(x, y, zoom) {
     view.zoom = clamp(zoom, 1, 8); view.w = W / view.zoom; view.h = proj.height / view.zoom;
     view.x = clamp(x, 0, W - view.w); view.y = clamp(y, 0, proj.height - view.h);
-    ui.svg.setAttribute("viewBox", view.x.toFixed(1) + " " + view.y.toFixed(1) + " " + view.w.toFixed(1) + " " + view.h.toFixed(1));
+    var box = view.x.toFixed(1) + " " + view.y.toFixed(1) + " " + view.w.toFixed(1) + " " + view.h.toFixed(1);
+    ui.svg.setAttribute("viewBox", box); ui.base.setAttribute("viewBox", box);
     ui.wrap.classList.toggle("is-zoomed", view.zoom > 1);
     ui.wrap.classList.toggle("show-names", view.zoom >= 2);
     hideTip();
@@ -340,6 +428,127 @@
     ui.pinned.forEach(function (g) {
       var o = g._off || [0, 0];
       g.setAttribute("transform", "translate(" + (g._at[0] + o[0]).toFixed(1) + " " + (g._at[1] + o[1]).toFixed(1) + ") scale(" + (k * small).toFixed(4) + ")");
+    });
+    if (ui.layers) ui.layers.setView(view);
+  }
+
+  // ---- map layers: the grid of forecast points is fetched the first time a layer is switched on
+  function loadGrid() {
+    if (grid || gridLoading || !ui.layers) return;
+    gridLoading = true; gridError = ""; renderLayers();
+    var saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(GRID_CACHE) || "null"); } catch (e) { /* no storage, or not ours */ }
+    var points = M.surfLayers.gridPoints(coast.bbox, GRID.cols, GRID.rows);
+    function column(list, key) { return [].concat(list).map(function (place) { return place.hourly[key]; }); }
+    var ask = saved && Date.now() - saved.at < CACHE_MINUTES * 60000 && saved.cols === GRID.cols && saved.rows === GRID.rows ? Promise.resolve(saved) : Promise.all([
+      getJson(query(WEATHER, points, ["wind_speed_10m", "wind_direction_10m", "precipitation", "temperature_2m"], "&wind_speed_unit=mph")),
+      getJson(query(MARINE, points, ["swell_wave_height", "swell_wave_direction"]))
+    ]).then(function (d) {
+      var out = { at: Date.now(), cols: GRID.cols, rows: GRID.rows, windSpeed: column(d[0], "wind_speed_10m"), windDir: column(d[0], "wind_direction_10m"),
+                  rain: column(d[0], "precipitation"), temp: column(d[0], "temperature_2m"), swell: column(d[1], "swell_wave_height"), swellDir: column(d[1], "swell_wave_direction") };
+      try { sessionStorage.setItem(GRID_CACHE, JSON.stringify(out)); } catch (e) { /* too big or no storage: fetch again next time */ }
+      return out;
+    });
+    ask.then(function (g) { grid = g; gridLoading = false; ui.layers.setData(g); ui.layers.setTime(state.t); ui.layers.set(state.layers); renderLayers(); })
+      .catch(function (e) { gridLoading = false; gridError = e && e.message ? e.message : "no answer"; renderLayers(); });
+  }
+  function toggleLayer(id) {
+    state.layers[id] = !state.layers[id];
+    if (state.layers[id]) loadGrid();
+    render();
+  }
+  function renderLayers() {
+    if (!ui.layerButtons) return;
+    LAYERS.forEach(function (l) { var on = !!state.layers[l.id]; ui.layerButtons[l.id].classList.toggle("is-on", on); ui.layerButtons[l.id].setAttribute("aria-pressed", on ? "true" : "false"); });
+    ui.wrap.classList.toggle("has-layers", layersOn().length > 0);
+    ui.wrap.classList.toggle("has-wash", !!state.layers.temp && !!grid);
+    if (ui.layers) ui.layers.set(grid ? state.layers : {});
+    clear(ui.layerNote);
+    if (!layersOn().length) { ui.read.hidden = true; return; }
+    if (gridError) {
+      ui.layerNote.appendChild(el("p", { class: "rpt-hint" }, ["Could not load the map layers: " + gridError + ". ",
+        el("button", { type: "button", class: "rpt-data-btn", text: "Try again", onclick: loadGrid })]));
+      return;
+    }
+    if (!grid) { ui.layerNote.appendChild(el("p", { class: "rpt-hint", text: "Loading the map layers…" })); return; }
+    var r = ui.layers.ranges() || {};
+    function line(name, text, extra) { ui.layerNote.appendChild(el("p", { class: "surf-layer-line" }, [el("strong", { text: name + " " }), text, extra || null])); }
+    function span(a, b, unit) { return Math.round(a) === Math.round(b) ? Math.round(a) + unit : Math.round(a) + " to " + Math.round(b) + unit; }
+    if (state.layers.wind) line("Wind", "streaks flow with the wind, faster where it is stronger" + (r.wind ? ": " + span(r.wind[0], r.wind[1], " mph") + " across the map." : "."));
+    if (state.layers.swell) line("Swell", "crests roll in with the swell, longer where it is bigger" + (r.swell ? ": " + ft(r.swell[0]) + " to " + ft(r.swell[1]) + " at sea." : "."));
+    if (state.layers.rain) line("Rain", r.rain && r.rain[1] >= 0.1 ? "dashes where it is raining, denser where it is heavier: up to " + r.rain[1].toFixed(1) + " mm an hour." : "dry everywhere at this hour.");
+    if (state.layers.temp && r.tempAll) line("Temperature", "air over the land" + (r.temp ? ", " + span(r.temp[0], r.temp[1], " °C") + " at this hour" : "") + ". Scale: " + Math.round(r.tempAll[0]) + " °C ",
+      el("span", {}, [el("span", { class: "surf-wash", "aria-hidden": "true" }), " " + Math.round(r.tempAll[1]) + " °C, the coldest and mildest of the whole forecast."]));
+  }
+  function readAt(e) {   // what the layers say under the pointer
+    if (!ui.layers || !grid || !layersOn().length) { ui.read.hidden = true; return; }
+    var r = ui.wrap.getBoundingClientRect(), v = ui.layers.readout(view.x + (e.clientX - r.left) / r.width * view.w, view.y + (e.clientY - r.top) / r.height * view.h), parts = [];
+    if (state.layers.wind && v.wind) parts.push("Wind " + Math.round(v.wind.speed) + " mph from " + compass(v.wind.from));
+    if (state.layers.swell && v.swell) parts.push("Swell " + ft(v.swell.height) + " from " + compass(v.swell.from));
+    if (state.layers.rain && num(v.rain)) parts.push(v.rain < 0.1 ? "Dry" : "Rain " + v.rain.toFixed(1) + " mm/h");
+    if (state.layers.temp && num(v.temp)) parts.push(Math.round(v.temp) + " °C");
+    ui.read.textContent = parts.join(" · ");
+    ui.read.hidden = !parts.length;
+  }
+
+  // ---- Find a session: the level score, marked down for each priority that is not met, hour by hour for one spot
+  function matchSeries(i) {
+    var d = data.spots[i], lv = level();
+    return d.a[lv.id].map(function (a, h) {
+      var m = a.score;
+      if (!m || !state.want.length) return m;
+      var x = { windSpeed: d.c[h].windSpeed, side: a.side, rain: d.rain[h], air: d.air[h], airRange: data.airRange, feet: a.feet };
+      state.want.forEach(function (id) { m *= priorityFit(id, x, lv); });
+      return m;
+    });
+  }
+  function wantValue(id, d, a, h) {   // what the forecast says about one priority, in words
+    var rain = d.rain[h];
+    return id === "lightwind" ? Math.round(d.c[h].windSpeed || 0) + " mph" :
+           id === "clean" ? ((d.c[h].windSpeed || 0) <= 5 ? "light wind" : a.side) :
+           id === "dry" ? (!num(rain) || rain < 0.1 ? "dry" : rain.toFixed(1) + " mm/h") :
+           id === "warm" ? (num(d.air[h]) ? Math.round(d.air[h]) + " °C" : "–") : surfRange(a.feet);
+  }
+  function toggleWant(id) {
+    var at = state.want.indexOf(id);
+    if (at >= 0) state.want.splice(at, 1);
+    else { state.want = state.want.filter(function (x) { return !(id === "smaller" && x === "bigger") && !(id === "bigger" && x === "smaller"); }); state.want.push(id); }
+    render();
+  }
+  function renderFinder() {
+    PRIORITIES.forEach(function (p) { var on = state.want.indexOf(p.id) >= 0; ui.wantButtons[p.id].classList.toggle("is-on", on); ui.wantButtons[p.id].setAttribute("aria-pressed", on ? "true" : "false"); });
+    clear(ui.picks);
+    if (!data) { ui.picks.appendChild(el("p", { class: "dash-empty", text: "Suggestions appear once the forecast has loaded." })); return; }
+    var lv = level(), dayIndex = null;
+    data.days.forEach(function (d, i) { if (d.date === state.wantDay && !d.past) dayIndex = i; });
+    ui.daySelect.value = dayIndex === null ? "" : state.wantDay;
+    var found = findSessions(spots.map(function (s, i) { return { match: matchSeries(i), daylight: data.spots[i].daylight }; }), data.days, data.now, { count: 3, day: dayIndex });
+    ui.finderSub.textContent = "The three best sessions " + (dayIndex === null ? "this week" : "on " + data.days[dayIndex].label.replace("Today", "today")) + " for " + lv.plural +
+      ". Sooner forecasts count for more, because they are more likely to hold.";
+    if (!found.length) {
+      ui.picks.appendChild(el("p", { class: "dash-empty", text: "Nothing suitable " + (dayIndex === null ? "in the next week" : "that day") + " for " + lv.plural + ". Try another level" +
+        (dayIndex === null ? "." : " or another day.") }));
+      return;
+    }
+    found.forEach(function (x, n) {
+      var s = spots[x.spot], d = data.spots[x.spot], a = d.a[lv.id][x.peak], rain = d.rain[x.peak];
+      var end = ("0" + (+data.hours[x.to - 1].slice(11, 13) + 1)).slice(-2) + ":00";
+      var here = s.id === state.spot && state.t >= x.from && state.t < x.to;
+      var hx = { windSpeed: d.c[x.peak].windSpeed, side: a.side, rain: rain, air: d.air[x.peak], airRange: data.airRange, feet: a.feet };
+      ui.picks.appendChild(el("button", { type: "button", class: "surf-pick" + (here ? " is-on" : ""), "aria-pressed": here ? "true" : "false",
+        title: "Show " + s.name + " at " + data.hours[x.peak].slice(11, 16) + " on the map",
+        onclick: function () { state.spot = s.id; setTime(x.peak); ui.wrap.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }, [
+        el("span", { class: "surf-pick-head" }, [el("span", { class: "surf-pick-rank", text: String(n + 1) }),
+          el("span", {}, [el("span", { class: "surf-pick-when", text: fmtHour(data.hours[x.from]) + " to " + end }), el("span", { class: "surf-pick-where", text: s.name })])]),
+        el("span", { class: "surf-pick-score" }, [el("strong", { text: a.score.toFixed(1) }), chip(a), el("span", { class: "surf-pick-surf", text: surfRange(a.feet) })]),
+        el("span", { class: "surf-pick-why", text: a.reason + (num(rain) && rain >= 0.1 && state.want.indexOf("dry") < 0 ? ", rain" : "") }),
+        state.want.length ? el("span", { class: "surf-pick-wants" }, state.want.map(function (id) {
+          var met = priorityFit(id, hx, lv) >= 0.8, p = PRIORITIES.filter(function (q) { return q.id === id; })[0];
+          return el("span", { class: "surf-want " + (met ? "is-met" : "is-missed") }, [el("span", { "aria-hidden": "true", text: met ? "✓ " : "✗ " }),
+            p.label + ": " + wantValue(id, d, a, x.peak), el("span", { class: "surf-sr", text: met ? " (met)" : " (not met)" })]);
+        })) : null,
+        el("span", { class: "surf-pick-sure is-" + x.certainty.toLowerCase() }, [el("strong", { text: x.certainty + " certainty" }),
+          " · " + (x.daysAhead === 0 ? "today" : x.daysAhead === 1 ? "tomorrow" : x.daysAhead + " days out")])]));
     });
   }
   function showTip(s) {
@@ -400,7 +609,7 @@
       stat("Wind", Math.round(c.windSpeed || 0) + " mph", a.side + ", from " + compass(c.windDirection || 0) + ", gusts " + Math.round(d.gust[t] || 0), "Gusts in mph"),
       stat("Tide", tide.level || "–", tide.trend, num(d.tide[t]) ? d.tide[t].toFixed(1) + " m against mean sea level. Shown, but not part of the score." : ""),
       stat("Sea", num(d.sea[t]) ? Math.round(d.sea[t]) + " °C" : "–", "water temperature"),
-      stat("Air", num(d.air[t]) ? Math.round(d.air[t]) + " °C" : "–", d.daylight[t] ? "daylight" : "dark")]));
+      stat("Air", num(d.air[t]) ? Math.round(d.air[t]) + " °C" : "–", (num(d.rain[t]) && d.rain[t] >= 0.1 ? "rain " + d.rain[t].toFixed(1) + " mm/h" : "dry") + (d.daylight[t] ? "" : ", dark"))]));
 
     host.appendChild(el("div", { class: "surf-block-label", text: "Score by level" }));
     var bars = el("div", { class: "surf-levels" });
@@ -459,7 +668,10 @@
   function renderWeek() {
     clear(ui.week);
     var days = data.days.filter(function (d) { return !d.past; });
-    var head = el("tr", {}, [el("th", { scope: "col", text: "Spot" })].concat(days.map(function (d) { return el("th", { scope: "col", text: d.label }); })));
+    var head = el("tr", {}, [el("th", { scope: "col", text: "Spot" })].concat(days.map(function (d, i) {
+      var sure = certainty(i).label;   // the first day still to come is today
+      return el("th", { scope: "col" }, [d.label, el("small", { class: "surf-sure is-" + sure.toLowerCase(), title: sure + " certainty: " + (i ? i + " days ahead" : "today"), text: sure })]);
+    })));
     var body = el("tbody", {}, spots.map(function (s, i) {
       var d = data.spots[i], scores = d.a[state.level].map(function (x) { return x.score; });
       return el("tr", { class: s.id === state.spot ? "is-on" : null }, [
@@ -476,8 +688,9 @@
   }
   function render() {
     LEVELS.forEach(function (l) { var on = l.id === state.level; ui.levelButtons[l.id].classList.toggle("is-active", on); ui.levelButtons[l.id].setAttribute("aria-pressed", on ? "true" : "false"); });
-    renderMap(); renderPanel();
-    if (data) { renderTime(); renderTable(); renderWeek(); }
+    renderMap(); renderPanel(); renderFinder();
+    if (data) { renderTime(); renderTable(); renderWeek(); if (ui.layers) ui.layers.setTime(state.t); }
+    renderLayers();
     writeState();
   }
   function select(id, show) { state.spot = id; render(); if (show) ui.wrap.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
@@ -501,11 +714,30 @@
     })));
     var canvas = el("div", { class: "rpt-canvas" });
     app.appendChild(canvas);
+
+    var finder = M.visual(canvas, "Find a session", { span: 12, cls: "surf-finder", sub: "The three best sessions this week." });
+    ui.finderSub = finder.parentNode.querySelector(".rpt-sub");
+    ui.wantButtons = {};
+    ui.daySelect = el("select", { class: "surf-when-pick", "aria-label": "When" }, [el("option", { value: "", text: "Any day" })]);
+    ui.daySelect.addEventListener("change", function () { state.wantDay = ui.daySelect.value; render(); });
+    finder.appendChild(el("div", { class: "surf-wants", role: "group", "aria-label": "What matters to you" }, [el("span", { class: "surf-wants-label", text: "What matters to you?" })]
+      .concat(PRIORITIES.map(function (p) {
+        return (ui.wantButtons[p.id] = el("button", { type: "button", class: "surf-toggle", "aria-pressed": "false", text: p.label, onclick: function () { toggleWant(p.id); } }));
+      })).concat([el("label", { class: "surf-when-label" }, ["When ", ui.daySelect])])));
+    ui.picks = el("div", { class: "surf-picks", "aria-live": "polite" });
+    finder.appendChild(ui.picks);
+
     var card = M.visual(canvas, "Loading the forecast…", { span: 12, cls: "surf-card" });
     ui.title = card.parentNode.querySelector("h3");
     var left = el("div", { class: "surf-left" }), main = el("div", { class: "surf-main" }, [left]);
     card.appendChild(main);
+    ui.layerButtons = {};
+    left.appendChild(el("div", { class: "surf-layers", role: "group", "aria-label": "Map layers" }, [el("span", { class: "surf-wants-label", text: "Map layers" })]
+      .concat(LAYERS.map(function (l) {
+        return (ui.layerButtons[l.id] = el("button", { type: "button", class: "surf-toggle", "aria-pressed": "false", text: l.label, onclick: function () { toggleLayer(l.id); } }));
+      }))));
     buildMap(left);
+    if (!ui.layers) left.querySelector(".surf-layers").hidden = true;
     ui.panel = el("aside", { class: "surf-panel", "aria-live": "polite" });
     main.appendChild(ui.panel);
     ui.timebar = el("div", { class: "surf-time", hidden: "" });
@@ -513,10 +745,12 @@
     left.appendChild(el("div", { class: "surf-legend" }, [el("span", { class: "rpt-hint", text: "Score out of 10:" })].concat(BANDS.map(function (b, i) {
       return el("span", { class: "surf-chip band-" + i, text: b.label + (i > 1 ? " " + b.from + "+" : "") });
     })).concat([el("span", { class: "surf-chip band-0 is-toobig" }, [el("span", { class: "surf-warn", "aria-hidden": "true", text: "⚠" }), "Too big"])])));
+    ui.layerNote = el("div", { class: "surf-layer-note", "aria-live": "polite" });
+    left.appendChild(ui.layerNote);
     ui.tableTitle = null;
     ui.table = M.visual(canvas, "Best spots", { span: 12, sub: "Every spot at the chosen time, best first. Click a heading to sort, or a spot to show it on the map." });
     ui.tableTitle = ui.table.parentNode.querySelector("h3");
-    ui.week = M.visual(canvas, "Week ahead", { span: 12, sub: "Each day's best score in daylight for the chosen level. Click a number to jump to that spot and hour." });
+    ui.week = M.visual(canvas, "Week ahead", { span: 12, sub: "Each day's best score in daylight for the chosen level. Click a number to jump to that spot and hour. Forecasts further ahead are less certain." });
     app.appendChild(el("p", { class: "rpt-hint surf-credit" }, [
       "Weather and marine data from ", el("a", { href: "https://open-meteo.com/", target: "_blank", rel: "noopener", text: "Open-Meteo" }), " (CC BY 4.0). ",
       coast.credit + " ", "Scores are a guide worked out from forecast models, not a safety service: check the sea when you get there and follow the lifeguards' advice."]));
@@ -534,6 +768,9 @@
     ui.timebar.appendChild(el("div", { class: "surf-days", role: "group", "aria-label": "Day" }, ui.dayButtons));
     ui.timebar.appendChild(el("div", { class: "surf-slider-row" }, [ui.nowButton, ui.play, ui.slider]));
     ui.timebar.hidden = false;
+    clear(ui.daySelect);
+    ui.daySelect.appendChild(el("option", { value: "", text: "Any day" }));
+    data.days.forEach(function (d) { if (!d.past) ui.daySelect.appendChild(el("option", { value: d.date, text: d.label })); });
   }
   function loadForecast() {
     ui.status.hidden = false; clear(ui.status); ui.status.appendChild(document.createTextNode("Loading the forecast…"));
@@ -548,6 +785,7 @@
       }
       ui.status.hidden = true;
       buildTime(); render();
+      if (layersOn().length) loadGrid();
     }).catch(function (e) {
       clear(ui.status);
       ui.title.textContent = "Forecast not loaded";

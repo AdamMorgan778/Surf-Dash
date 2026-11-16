@@ -71,6 +71,7 @@ extra_javascript:
   - assets/housekeeping.js
   - assets/rules.js
   - assets/jetski.js
+  - assets/surf-layers.js
   - assets/surf.js
 
 markdown_extensions:
