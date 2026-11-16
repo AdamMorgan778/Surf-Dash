@@ -61,7 +61,7 @@ metadata/*.yaml ─────────┘                                  
 GitHub issues ───────────► fetch_issues.py ──► build/issues.json ───────────────────────────────────────┘
 ```
 
-Python works everything out; the scripts in `docs/assets/` only draw it. The site reads five small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table), `issues.json`, `gaps.json` (what the documentation is missing, from `tools/gaps.py`) and `work.json` (who is changing what, from `tools/work.py`).
+Python works everything out; the scripts in `docs/assets/` only draw it. The site reads six small data files: `summary.json`, `results.json` (the failing checks, plus pass and fail counts per rule and table), `issues.json`, `planning.json` (the requirements, from `tools/planning.py`), `gaps.json` (what the documentation is missing, from `tools/gaps.py`) and `work.json` (who is changing what, from `tools/work.py`).
 
 The sidebar is built from the folders under `docs/`. The generated bus matrix, catalogue, glossary and dictionary are written to `docs/documentation/`, so they appear as one **Documentation** section whose first page is the what-is-missing dashboard.
 
@@ -70,7 +70,7 @@ The sidebar is built from the folders under `docs/`. The generated bus matrix, c
 | `publish.yml` | Push to `main`, an issue changes, daily | Tests, builds and deploys the site. |
 | `check.yml` | A pull request | Tests, builds without deploying, and compares rule results with the base branch. |
 | `housekeeping-details.yml` | An issue is opened | Adds a description under every housekeeping item and the `housekeeping` label. |
-| `branch-activity.yml` | A branch is created, pushed to or deleted; a pull request is opened or closed | Rebuilds the site, so the Work in progress page and the In progress tags stay current. |
+| `branch-activity.yml` | A branch is created, pushed to or deleted; a pull request is opened or closed; an issue is opened, closed or reopened | Keeps requirement issues in step (`tools/flow.py`): labels them, stamps who took one out, completes one when its pull request merges, and closes or reopens a parent with its parts. Then rebuilds the site. |
 
 ## Rules
 
@@ -104,6 +104,16 @@ Two principles keep the results honest. One problem is one failure: if two rules
 `check.yml` runs `tools/check_pr.py`, which applies the pull request's rules to both versions of the model. Its summary lists the failures the change adds and fixes, and it annotates the changed lines. It fails only when the change **adds** a failure at error severity, so clean-up can be merged a piece at a time.
 
 A failed check does not stop a merge by itself. To enforce it, add a branch rule on `main` that requires the **Model checks / check** status (Settings, Rules, Rulesets).
+
+## Planning
+
+Requirements are GitHub issues raised with the **Requirement** form (`.github/ISSUE_TEMPLATE/requirement.yml`). `tools/fetch_issues.py` reads every one of them, open or closed, and `tools/planning.py` turns them into `docs/data/planning.json` for the **Planning** page (`docs/planning.md`, `docs/assets/planning.js`) and the Overview. How people use it is on the site's **Using this site** page.
+
+- **Status** comes from the issue: open with nobody on it is Not started; assigned or with a branch is Taken out; closed as completed is Complete; reopened is Reopened; closed as not planned is Dropped.
+- **Who took it out and when** is a hidden stamp `tools/flow.py` writes at the top of the issue when a branch is created for it (`<!-- taken-out: name | date | branch -->`). The branch is matched by GitHub's link, or by the issue number its name starts with.
+- **Sub-requirements** name their parent in the form's Parent requirement field. Percentage complete counts requirements that have no parts of their own.
+- **Overdue and due soon** are worked out in the browser from the viewer's date, so they are right between builds. The date helpers are tested with `node tests/planning.test.js`.
+- `tools/flow.py` always runs from the default branch, and only changes issues: it never touches the code.
 
 ## Work in progress
 

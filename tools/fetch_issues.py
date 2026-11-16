@@ -60,6 +60,44 @@ def parse_claims(text):
     return out
 
 
+# The stamp tools/flow.py writes at the top of an issue when someone creates a branch for it:
+#   <!-- taken-out: alice | 2026-11-16 | 12-add-tide-measure -->
+STAMP = re.compile(r"<!--\s*taken-out:\s*(\S+)\s*\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*(.+?)\s*-->")
+_MONTHS = {m: n for n, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+
+
+def taken_out(body):
+    """[{by, on, branch}] for every take-out stamp in an issue body, oldest first."""
+    return [{"by": m.group(1), "on": m.group(2), "branch": m.group(3)} for m in STAMP.finditer(body or "")]
+
+
+def parse_due(text):
+    """A due date as YYYY-MM-DD, or "" when it can't be read. Accepts 2026-12-01, 1 Dec 2026 and December 1, 2026.
+    Numeric dates with slashes are refused: 01/12/2026 means different days to different people."""
+    text = (text or "").strip()
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", text)
+    if m:
+        y, mo, d = (int(x) for x in m.groups())
+    else:
+        m = re.fullmatch(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})", text) or \
+            re.fullmatch(r"([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})", text)
+        if not m:
+            return ""
+        a, b, y = m.groups()
+        d, word = (int(a), b) if a.isdigit() else (int(b), a)
+        mo, y = _MONTHS.get(word[:3].lower()), int(y)
+        if not mo:
+            return ""
+    try:
+        return datetime(y, mo, d).strftime("%Y-%m-%d")
+    except ValueError:
+        return ""
+
+
+def is_requirement(fields, labels):
+    return "requirement" in (l.lower() for l in labels) or ("acceptance criteria" in fields and "due date" in fields)
+
+
 def shape(issue):
     fields = form_fields(issue.get("body"))
     labels = [l["name"] for l in issue.get("labels", [])]
@@ -83,6 +121,20 @@ def shape(issue):
         out.update(claims=claims, requestType="Working on")
         if not table:
             out["table"] = claims[0]["name"] if len(claims) == 1 and claims[0]["kind"] == "table" else MODEL_LABEL
+    if is_requirement(fields, labels):
+        due_text = fields.get("due date", "").split("\n")[0].strip()
+        due = parse_due(due_text)
+        parent = re.search(r"\d+", fields.get("parent requirement", ""))
+        area = fields.get("area", "").split("\n")[0].strip()
+        out.update(requestType="Requirement", requirement={
+            "details": fields.get("details", "")[:2000], "acceptance": fields.get("acceptance criteria", "")[:2000], "area": area,
+            # the form's date, else the milestone's; dueText keeps a date that could not be read, so it can be flagged
+            "due": due or ((issue.get("milestone") or {}).get("due_on") or "")[:10], "dueText": "" if due else due_text,
+            "parent": int(parent.group(0)) if parent else None})
+        if not table and area:
+            out["table"] = area
+    out["stateReason"] = issue.get("state_reason") or ""
+    out["takenOut"] = taken_out(issue.get("body"))
     out["author"] = (issue.get("user") or {}).get("login", "")
     out["assignees"] = [a["login"] for a in issue.get("assignees") or [] if a.get("login")]
     out["branches"] = []
@@ -106,7 +158,7 @@ def set_work(issue):
     """Is anyone working on it? An assignee, a branch made with Create a branch, or the in-progress label."""
     if issue["state"] != "open":
         issue["work"] = "closed"
-    elif issue["assignees"] or issue["branches"] or IN_PROGRESS_LABEL in (l.lower() for l in issue["labels"]):
+    elif issue["assignees"] or issue["branches"] or issue.get("takenOut") or IN_PROGRESS_LABEL in (l.lower() for l in issue["labels"]):
         issue["work"] = "in-progress"
     else:
         issue["work"] = "raised"
@@ -124,12 +176,12 @@ def _graphql(query, variables):
 
 
 def attach_branches(slug, issues, query=_graphql):
-    """Add the branches linked to each open housekeeping issue (made with Create a branch) in one GraphQL call.
+    """Add the branches linked to each open housekeeping or requirement issue (made with Create a branch) in one GraphQL call.
 
     GraphQL always needs a token. Without one the check is skipped and assignees and labels still decide `work`.
     Returns a note when it could not run.
     """
-    wanted = [i for i in issues if i.get("items") is not None and i["state"] == "open"]
+    wanted = [i for i in issues if (i.get("items") is not None or i.get("requirement")) and i["state"] == "open"]
     if not wanted:
         return ""
     owner, name = slug.split("/", 1)
@@ -156,6 +208,9 @@ def fetch(slug):
     since = cutoff.strftime("%Y-%m-%dT%H:%M:%SZ")
     issues += [i for i in _pages(slug, f"state=closed&since={since}")
                if "pull_request" not in i and (i.get("closed_at") or "") >= since]
+    # every requirement, however long ago it was closed, so completed ones stay in the percentage
+    seen = {i["number"] for i in issues}
+    issues += [i for i in _pages(slug, "state=all&labels=requirement") if "pull_request" not in i and i["number"] not in seen]
     shaped = [shape(i) for i in issues]
     note = attach_branches(slug, shaped)
     if note:
@@ -170,15 +225,25 @@ def fetch_pulls(slug):
             for p in _get(f"https://api.github.com/repos/{slug}/pulls?state=open&per_page=100")]
 
 
+def fetch_merged(slug):
+    """Pull requests merged in the last CLOSED_DAYS days, newest first: what has been implemented recently."""
+    since = (datetime.now(timezone.utc) - timedelta(days=CLOSED_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    pulls = _get(f"https://api.github.com/repos/{slug}/pulls?state=closed&sort=updated&direction=desc&per_page=50")
+    out = [{"number": p["number"], "title": p["title"], "url": p["html_url"], "author": (p.get("user") or {}).get("login", ""),
+            "merged": p["merged_at"][:10], "branch": p["head"]["ref"]} for p in pulls if p.get("merged_at") and p["merged_at"] >= since]
+    return sorted(out, key=lambda p: p["merged"], reverse=True)
+
+
 def main():
     slug = repo_slug()
-    issues, pulls, note = [], [], ""
+    issues, pulls, merged, note = [], [], [], ""
     if not slug:
         note = "No GitHub remote configured; issues were not fetched."
     else:
         try:
             issues = fetch(slug)
             pulls = fetch_pulls(slug)
+            merged = fetch_merged(slug)
         except (urllib.error.URLError, TimeoutError, ValueError) as e:
             note = f"Could not fetch issues: {e}"
     if note:
@@ -186,7 +251,7 @@ def main():
     os.makedirs(BUILD, exist_ok=True)
     with open(os.path.join(BUILD, "issues.json"), "w", encoding="utf-8") as f:
         json.dump({"repo": slug, "fetched": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-                   "note": note, "closedDays": CLOSED_DAYS, "issues": issues, "pulls": pulls}, f, indent=2)
+                   "note": note, "closedDays": CLOSED_DAYS, "issues": issues, "pulls": pulls, "merged": merged}, f, indent=2)
     print(f"issues.json: {sum(1 for i in issues if i['state'] == 'open')} open, "
           f"{sum(1 for i in issues if i['state'] == 'closed')} recently closed")
 

@@ -1,0 +1,49 @@
+name: Requirement
+description: Something the model or report needs to do, with who will do it and by when. Shown on the Planning page.
+title: "[Requirement] "
+labels: ["requirement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usually opened from **Add requirement** on the Planning page of the docs site, which fills this in.
+        To start work, open **Development** in the right-hand sidebar and choose **Create a branch**: the site then shows who took it out and when. Merging that branch marks the requirement complete. If it turns out not to be satisfied, **Reopen** this issue.
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What is needed, and why.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we will know it is satisfied. One line per check.
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: The table or report page this is about, spelt as on the docs site. Leave blank if it is wider than one.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - High
+        - Medium
+        - Low
+      default: 1
+    validations:
+      required: true
+  - type: input
+    id: due
+    attributes:
+      label: Due date
+      description: When it should be complete, as YYYY-MM-DD (for example 2026-12-01). If left blank, the milestone's date is used.
+      placeholder: "2026-12-01"
+  - type: input
+    id: parent
+    attributes:
+      label: Parent requirement
+      description: The number of the requirement this is part of, for example 12. Leave blank for a requirement in its own right.

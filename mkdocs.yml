@@ -7,6 +7,7 @@ theme:
   name: material
   features:
     - navigation.indexes
+    - navigation.expand   # sections are always open, so entries don't move as you change page
     - navigation.top
     - search.highlight
     - content.code.copy
@@ -30,6 +31,7 @@ theme:
 # lists them instead, so a model with many tables does not swamp the sidebar.
 nav:
   - Overview: index.md
+  - Planning: planning.md
   - Work in progress: work.md
   - Documentation:
       - documentation/index.md
@@ -60,6 +62,7 @@ extra_css:
   - assets/jetski.css
 extra_javascript:
   - assets/ui.js
+  - assets/planning.js
   - assets/home.js
   - assets/documentation.js
   - assets/work.js
