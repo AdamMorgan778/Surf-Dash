@@ -108,6 +108,8 @@ The forecast is fetched from [Open-Meteo](https://open-meteo.com/) when you open
 | See one spot in detail | Click its marker on the map, or its name in the lists. |
 | Look ahead, or back | Pick a day, drag the slider, or press Play to step through the hours. Now returns to the present. |
 | Find the best day this week | Use Week ahead: each number is that day's best score in daylight. Click one to jump to it. |
+| Be told when and where to go | Use Find a session: pick what matters to you and click one of the three suggestions. |
+| See the weather on the map | Switch on Wind, Swell, Rain or Temperature above the map, in any combination. |
 | Zoom the map | Use the + and − buttons, double-click, or hold Ctrl and scroll. Drag to move around when zoomed in. |
 
 ### How the surf score works
@@ -126,6 +128,42 @@ Each spot gets a score from 0 to 10 for each level and hour:
 | Fair | 3 to 5 |
 | Good | 5 to 7.5 |
 | Epic | 7.5 and over |
+
+### Find a session
+
+Find a session suggests the three best sessions in the week ahead for your level. A session is a beach, a day and a run of daylight hours.
+
+Pick any of the priorities to say what matters to you. Each one marks a session down when it is not met. None of them rules a session out, so you always get suggestions, and each suggestion shows a tick or a cross against every priority you picked.
+
+| Priority | Prefers |
+| --- | --- |
+| Light wind | Under about 8 mph; fades out towards 25 mph |
+| Clean waves | Wind blowing off the land, or hardly any |
+| Dry | No rain |
+| Warmer | The milder hours of the week |
+| Smaller waves | The gentle end of your level's size range |
+| Bigger waves | The punchy end of your level's size range |
+
+Sooner sessions rank higher, because a forecast for tomorrow is more likely to hold than one for next week:
+
+| How far ahead | Certainty | Effect |
+| --- | --- | --- |
+| Up to 2 days | High | None |
+| 3 to 4 days | Medium | Marked down by 15% |
+| 5 to 7 days | Low | Marked down by 30% |
+
+This is a rule of thumb, not a probability. No more than two suggestions come from the same day, unless you choose one day with When. The map, the Best spots list and the Week ahead grid always show the plain score for your level; priorities only change the suggestions.
+
+### Map layers
+
+| Layer | What you see |
+| --- | --- |
+| Wind | Streaks flowing the way the wind blows, faster and brighter where it is stronger |
+| Swell | Wave crests rolling the way the swell travels, over the sea, longer where it is bigger |
+| Rain | Slanted dashes where it is raining, denser where it is heavier |
+| Temperature | A colour wash over the land, from pale (cold) to orange (mild), for the air temperature |
+
+Point at the map to read the values there. The layers follow the time bar, so Play shows the weather crossing the county. They are drawn from forecast points about 10 km apart, so they show the pattern across the county and not the wind on one beach; the numbers for each beach come from that beach's own forecast. If your device is set to reduce motion, wind and swell show as still arrows.
 
 Tide, sea temperature and gusts are shown but not scored. The scores are a guide worked out from forecast models, not a safety service: check the sea when you get there and follow the lifeguards' advice.
 
