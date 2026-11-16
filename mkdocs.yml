@@ -42,6 +42,7 @@ nav:
   - Best practice:
       - rules/index.md
       - Rule library: rules/reference.md
+  - Surf forecast: surf/index.md
   - Play: play/index.md
   - Using this site: guide.md
 
@@ -60,6 +61,7 @@ extra_css:
   - assets/site.css
   - assets/report.css
   - assets/jetski.css
+  - assets/surf.css
 extra_javascript:
   - assets/ui.js
   - assets/planning.js
@@ -69,6 +71,7 @@ extra_javascript:
   - assets/housekeeping.js
   - assets/rules.js
   - assets/jetski.js
+  - assets/surf.js
 
 markdown_extensions:
   - tables
