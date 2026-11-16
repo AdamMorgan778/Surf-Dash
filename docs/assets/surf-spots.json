@@ -1,0 +1,30 @@
+{
+  "note": "The surf spots and place names on the Surf forecast map. Edit by hand. 'faces' is the compass bearing the beach looks out on, in degrees (270 = due west); the score uses it to tell how squarely the swell arrives and whether the wind is offshore. The wave forecast is read 3 km out to sea in that direction; 'seaKm' changes the distance where an island is in the way.",
+  "spots": [
+    { "id": "poppit", "name": "Poppit Sands", "lat": 52.1058, "lon": -4.6943, "faces": 325, "type": "Beach break", "about": "Sheltered estuary-mouth beach. Needs a big swell; gentle when it works." },
+    { "id": "newport", "name": "Newport Sands", "lat": 52.0280, "lon": -4.8400, "faces": 320, "type": "Beach break", "about": "Wide north-facing bay. Small and mellow unless the swell is large." },
+    { "id": "abermawr", "name": "Abermawr", "lat": 51.9695, "lon": -5.0850, "faces": 300, "type": "Beach and pebble bank", "about": "Quiet north-coast cove that picks up westerly swell." },
+    { "id": "abereiddy", "name": "Abereiddy", "lat": 51.9370, "lon": -5.2065, "faces": 295, "type": "Beach and reef", "about": "Dark-sand bay with reef either side. Better for experienced surfers." },
+    { "id": "whitesands", "name": "Whitesands", "lat": 51.8970, "lon": -5.2960, "faces": 290, "type": "Beach break", "about": "The best-known beach near St Davids. Busy, with room for learners in the middle." },
+    { "id": "newgale", "name": "Newgale", "lat": 51.8560, "lon": -5.1265, "faces": 250, "type": "Beach break", "about": "Two miles of sand open to the Atlantic. Something for every level." },
+    { "id": "broadhaven", "name": "Broad Haven", "lat": 51.7800, "lon": -5.1045, "faces": 270, "type": "Beach break", "about": "Smaller and gentler than Newgale, tucked into St Brides Bay." },
+    { "id": "marloes", "name": "Marloes Sands", "lat": 51.7240, "lon": -5.2140, "faces": 210, "type": "Beach and reef", "about": "Remote south-west-facing beach with rocks. A walk in, and no lifeguards." },
+    { "id": "westdale", "name": "West Dale", "lat": 51.7095, "lon": -5.1890, "faces": 235, "type": "Beach break", "about": "Compact bay that catches plenty of swell, with strong currents." },
+    { "id": "freshwest", "name": "Freshwater West", "lat": 51.6580, "lon": -5.0615, "faces": 245, "type": "Beach and reef", "about": "The most consistent surf in Wales. Powerful, with strong rips." },
+    { "id": "broadhavensouth", "name": "Broad Haven South", "lat": 51.6090, "lon": -4.9225, "faces": 160, "type": "Beach break", "about": "South-facing cove near Bosherston. Works when the west coast is too big." },
+    { "id": "manorbier", "name": "Manorbier", "lat": 51.6420, "lon": -4.8035, "faces": 200, "type": "Beach and reef point", "about": "Castle-backed bay with a right-hand reef point. Needs a solid swell." },
+    { "id": "fresheast", "name": "Freshwater East", "lat": 51.6455, "lon": -4.8640, "faces": 135, "type": "Beach break", "about": "Sheltered south-east-facing bay. A stormy-day option." },
+    { "id": "tenby", "name": "Tenby South Beach", "lat": 51.6650, "lon": -4.7060, "faces": 145, "seaKm": 1.5, "type": "Beach break", "about": "Long sheltered beach. Only breaks in the biggest swells." }
+  ],
+  "towns": [
+    { "name": "St Davids", "lat": 51.8820, "lon": -5.2690 },
+    { "name": "Fishguard", "lat": 51.9940, "lon": -4.9760 },
+    { "name": "Haverfordwest", "lat": 51.8020, "lon": -4.9700 },
+    { "name": "Pembroke", "lat": 51.6760, "lon": -4.9170 },
+    { "name": "Cardigan", "lat": 52.0840, "lon": -4.6600 }
+  ],
+  "seas": [
+    { "name": "St Brides Bay", "lat": 51.8050, "lon": -5.2550 },
+    { "name": "Cardigan Bay", "lat": 52.1300, "lon": -5.0300 }
+  ]
+}

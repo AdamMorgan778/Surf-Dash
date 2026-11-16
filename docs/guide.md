@@ -16,6 +16,7 @@ This site is generated from the Power BI semantic model in the repository. It is
 | [Glossary](documentation/glossary.md) | Check what a business term means and where it appears in the model. |
 | [Best practice](rules/index.md) | See which modelling conventions and best-practice rules the model breaks, filter them, and raise clean-up work. |
 | [Rule library](rules/reference.md) | Read what each rule checks and how to fix a failure. |
+| [Surf forecast](surf/index.md) | See live surf conditions around Pembrokeshire on a map, scored for four ability levels, up to a week ahead. |
 | [Play](play/index.md) | Race a jetski over sine-wave waves. Your score is multiplied by the documentation coverage. |
 
 A field marked *Missing* has no description in the model yet. The footer of every page says when the site was last updated, and links to the GitHub Actions run that built it.
@@ -94,6 +95,41 @@ The page has three tabs:
 - **Calendar** shows the due dates month by month; click one to open the requirement.
 
 Percentage complete counts the smallest pieces of work: a requirement that has been broken down is counted through its sub-requirements. Write due dates as `2026-12-01`; a date the site can't read is flagged rather than ignored.
+
+## Surf forecast
+
+The [Surf forecast](surf/index.md) page shows the surf around Pembrokeshire. It is sample content for the surf model, like [Play](play/index.md), and reads nothing from the model except its four skill levels.
+
+The forecast is fetched from [Open-Meteo](https://open-meteo.com/) when you open the page, so it is always current. It covers the last three days and the next week, hour by hour.
+
+| To | Do this |
+| --- | --- |
+| Score the surf for your ability | Pick Beginner, Intermediate, Advanced or Pro in the banner. |
+| See one spot in detail | Click its marker on the map, or its name in the lists. |
+| Look ahead, or back | Pick a day, drag the slider, or press Play to step through the hours. Now returns to the present. |
+| Find the best day this week | Use Week ahead: each number is that day's best score in daylight. Click one to jump to it. |
+| Zoom the map | Use the + and − buttons, double-click, or hold Ctrl and scroll. Drag to move around when zoomed in. |
+
+### How the surf score works
+
+Each spot gets a score from 0 to 10 for each level and hour:
+
+1. **Surf height at the beach** is estimated from the swell 3 km out to sea. It is smaller when the swell is not heading towards the beach, and bigger for long-period swell.
+2. **Size for the level.** Each level has an ideal range: about 1.5 to 2.5 ft for Beginner, 2 to 4 ft for Intermediate, 3 to 7 ft for Advanced and 5 to 12 ft for Pro. The score falls away outside the range. Well above it the score is 0 and the spot is marked Too big.
+3. **Swell period.** Longer-period swell scores higher. It matters least for beginners.
+4. **Wind.** Light wind, or wind blowing off the land (offshore), scores well. Strong wind off the sea (onshore) scores badly. Beginners are marked down more for strong wind.
+
+| Band | Score |
+| --- | --- |
+| Flat | No surf, or too small or too big for the level |
+| Poor | Under 3 |
+| Fair | 3 to 5 |
+| Good | 5 to 7.5 |
+| Epic | 7.5 and over |
+
+Tide, sea temperature and gusts are shown but not scored. The scores are a guide worked out from forecast models, not a safety service: check the sea when you get there and follow the lifeguards' advice.
+
+The spots, and the direction each beach faces, are in `docs/assets/surf-spots.json`; edit that file to correct, add or remove one. A project that does not want the page can delete its sidebar entry in `mkdocs.yml`.
 
 ## Pull requests
 

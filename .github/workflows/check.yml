@@ -40,6 +40,8 @@ jobs:
         run: node tests/jetski.test.js
       - name: Test the Planning page's date helpers
         run: node tests/planning.test.js
+      - name: Test the Surf forecast page's scoring and spots
+        run: node tests/surf.test.js
       - name: Build the site (not deployed)
         run: python tools/build.py
         env:

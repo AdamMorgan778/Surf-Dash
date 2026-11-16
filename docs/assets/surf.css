@@ -1,0 +1,138 @@
+/* Surf forecast (surf.js): the map, its markers, the spot panel, the time bar and the week grid.
+   Score bands are one hue from pale to deep (Flat, Poor, Fair, Good, Epic), so the order reads in the colour; the
+   number is always shown as well. The steps were checked with the dataviz palette validator as an ordinal ramp
+   against the card surface in each scheme, and the text colour inside each step for contrast. */
+body, body[data-md-color-scheme="default"] {
+  --surf-b0: #72bfd0; --surf-b1: #46a7bd; --surf-b2: #0089a1; --surf-b3: #00677c; --surf-b4: #004150;
+  --surf-ink-pale: #0f2a3d; --surf-ink-deep: #ffffff;      /* text on bands 0 and 1, and on bands 2 to 4 */
+  --map-sea-a: #0b3a5b; --map-sea-b: #0e7490; --map-sea-c: #1fb6d3;
+  --map-land: #f4e6c8; --map-land-near: #e9dcc2; --map-coast: #fff8e8; --map-town: #8a7448; --map-ring: #ffffff;
+}
+body[data-md-color-scheme="slate"] {
+  --surf-b0: #286f76; --surf-b1: #2b8f9a; --surf-b2: #38b1bd; --surf-b3: #65d0dc; --surf-b4: #a2edf6;
+  --surf-ink-pale: #ffffff; --surf-ink-deep: #06202b;
+  --map-sea-a: #04131f; --map-sea-b: #082f49; --map-sea-c: #0e5a70;
+  --map-land: #27475a; --map-land-near: #1e3a49; --map-coast: #4a8296; --map-town: #b4c6d0; --map-ring: #0b1a22;
+}
+.band-0 { --b: var(--surf-b0); --b-ink: var(--surf-ink-pale); }
+.band-1 { --b: var(--surf-b1); --b-ink: var(--surf-ink-pale); }
+.band-2 { --b: var(--surf-b2); --b-ink: var(--surf-ink-deep); }
+.band-3 { --b: var(--surf-b3); --b-ink: var(--surf-ink-deep); }
+.band-4 { --b: var(--surf-b4); --b-ink: var(--surf-ink-deep); }
+.band-none { --b: var(--card-bg); --b-ink: var(--md-default-fg-color--light); }
+
+/* ---- layout: map and spot panel side by side, stacked on a narrow screen */
+.surf-main { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(15rem, 1fr); gap: 1.3rem; align-items: start; }
+@media (max-width: 1100px) { .surf-main { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- map */
+.surf-map-wrap { position: relative; overflow: hidden; border-radius: 14px; background: var(--map-sea-b); user-select: none; -webkit-user-select: none; }
+.md-typeset .surf-map { display: block; width: 100%; height: 100%; max-width: none; touch-action: pan-y; }
+.is-zoomed .surf-map { touch-action: none; cursor: grab; }
+.is-dragging .surf-map { cursor: grabbing; }
+.surf-sea-a { stop-color: var(--map-sea-a); } .surf-sea-b { stop-color: var(--map-sea-b); } .surf-sea-c { stop-color: var(--map-sea-c); }
+.surf-coast path { fill: none; stroke: var(--map-coast); stroke-width: 5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.surf-land { filter: drop-shadow(0 3px 5px rgba(4, 25, 40, 0.3)); }
+.surf-land path { fill: var(--map-land); }
+.surf-land path.is-near { fill: var(--map-land-near); }
+.surf-px text { font-family: inherit; }
+.surf-sea-name text { fill: rgba(255, 255, 255, 0.5); font-size: 11px; font-style: italic; letter-spacing: 0.14em; text-anchor: middle; text-transform: uppercase; }
+.surf-town circle { fill: var(--map-town); }
+.surf-town text { fill: var(--map-town); font-size: 11px; font-weight: 500; }
+
+.surf-marker { cursor: pointer; outline: none; }
+.surf-disc { fill: var(--b); stroke: var(--map-ring); stroke-width: 2.5px; }
+.surf-num { fill: var(--b-ink); font-size: 12.5px; font-weight: 800; text-anchor: middle; pointer-events: none; }
+.surf-halo { fill: none; stroke: #ffffff; stroke-width: 2px; opacity: 0; }
+.surf-marker:hover .surf-halo, .surf-marker:focus-visible .surf-halo { opacity: 0.7; }
+.surf-marker.is-selected .surf-halo { opacity: 1; }
+.surf-marker.is-toobig .surf-disc { stroke: var(--coral); stroke-dasharray: 4 2.5; }
+.surf-name { display: none; fill: #ffffff; font-size: 12px; font-weight: 700; text-anchor: middle; pointer-events: none;
+  paint-order: stroke; stroke: rgba(8, 40, 60, 0.9); stroke-width: 3.5px; stroke-linejoin: round; }
+.surf-marker.is-selected .surf-name, .show-names .surf-name { display: block; }
+
+.surf-tip { position: absolute; z-index: 2; display: flex; flex-direction: column; transform: translate(-50%, calc(-100% - 24px)); padding: 0.3rem 0.6rem;
+  border-radius: 8px; font-size: 0.62rem; line-height: 1.4; white-space: nowrap; pointer-events: none; color: #ffffff; background: rgba(8, 32, 48, 0.94);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3); }
+.surf-dial { position: absolute; left: 0.6rem; bottom: 0.6rem; display: grid; gap: 0.2rem; padding: 0.45rem 0.65rem; border-radius: 10px; font-size: 0.6rem;
+  color: #ffffff; background: rgba(8, 32, 48, 0.72); pointer-events: none; }
+.surf-dial-row { display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+.md-typeset .surf-arrow { flex: none; width: 0.95rem; height: 0.95rem; fill: #a5f3fc; }
+.surf-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 0.5rem; max-width: 88%; padding: 0.55rem 0.9rem; border-radius: 12px; font-size: 0.68rem; text-align: center; color: #ffffff; background: rgba(8, 32, 48, 0.88); }
+.surf-hint { position: absolute; left: 50%; bottom: 0.8rem; transform: translateX(-50%); padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.62rem;
+  white-space: nowrap; pointer-events: none; color: #ffffff; background: rgba(8, 32, 48, 0.85); }
+@media (max-width: 600px) { .surf-dial { display: none; } }   /* the panel below says the same on a phone */
+.surf-tip[hidden], .surf-dial[hidden], .surf-status[hidden], .surf-hint[hidden], .surf-time[hidden] { display: none; }
+.surf-zoom { position: absolute; right: 0.6rem; top: 0.6rem; display: grid; gap: 0.25rem; }
+.surf-zoom-btn { width: 1.7rem; height: 1.7rem; padding: 0; border: 0; border-radius: 8px; font: inherit; font-size: 0.9rem; font-weight: 700; line-height: 1; cursor: pointer;
+  color: #0b3a5b; background: rgba(255, 255, 255, 0.92); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+.surf-zoom-btn:hover, .surf-zoom-btn:focus-visible { background: #ffffff; outline: 2px solid var(--aqua); }
+
+/* ---- the selected spot */
+.surf-panel { min-width: 0; }
+.md-typeset .surf-spot-name { margin: 0; font-size: 1.05rem; font-weight: 800; }
+.md-typeset .surf-spot-type { margin: 0.1rem 0 0.7rem; font-size: 0.65rem; color: var(--md-default-fg-color--light); }
+.surf-verdict { display: flex; align-items: baseline; gap: 0.35rem; }
+.surf-score { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.surf-outof { margin-right: 0.4rem; font-size: 0.7rem; color: var(--md-default-fg-color--light); }
+.surf-chip { display: inline-flex; align-items: center; padding: 0.12rem 0.6rem; border-radius: 999px; font-size: 0.6rem; font-weight: 700; white-space: nowrap;
+  color: var(--b-ink); background: var(--b); }
+.surf-chip.is-toobig, .surf-cell.is-toobig { box-shadow: inset 0 0 0 2px var(--coral); }
+.surf-warn { margin-right: 0.25rem; }
+.surf-left { min-width: 0; }
+.md-typeset .surf-reason { margin: 0.45rem 0 0.8rem; font-size: 0.72rem; }
+.md-typeset .surf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; margin: 0 0 0.9rem; }
+@media (max-width: 1400px) { .md-typeset .surf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.surf-stat { padding: 0.45rem 0.6rem; border-radius: 10px; background: var(--md-code-bg-color); }
+.md-typeset .surf-stat dt { margin: 0; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--md-default-fg-color--light); }
+.md-typeset .surf-stat dd { margin: 0; font-size: 0.85rem; font-weight: 700; }
+.surf-stat small { display: block; font-size: 0.6rem; font-weight: 400; color: var(--md-default-fg-color--light); }
+.surf-block-label { display: flex; justify-content: space-between; gap: 0.5rem; margin: 0.9rem 0 0.3rem; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--md-typeset-a-color); }
+.surf-best { font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--md-default-fg-color--light); }
+.surf-levels .bar-row { grid-template-columns: 5.5rem 1fr auto; }
+.bar-fill.surf-fill { background: var(--b); }
+.surf-hours { display: flex; align-items: flex-end; gap: 2px; height: 3.2rem; }
+.surf-hour { flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; padding: 0; border: 0; border-radius: 4px; background: none; cursor: pointer; }
+.surf-hour span { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--b); }
+.surf-hour.is-night span { opacity: 0.4; }
+.surf-hour:hover, .surf-hour:focus-visible { background: var(--md-code-bg-color); outline: none; }
+.surf-hour.is-on { background: var(--md-code-bg-color); box-shadow: 0 0 0 1.5px var(--md-default-fg-color); }
+.surf-hours-axis { display: flex; justify-content: space-between; margin-top: 0.15rem; font-size: 0.55rem; color: var(--md-default-fg-color--light); }
+.md-typeset .surf-about { margin: 0.8rem 0 0; font-size: 0.66rem; color: var(--md-default-fg-color--light); }
+
+/* ---- time bar and legend */
+.surf-when { margin-left: 0.3rem; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.58rem; font-weight: 700; vertical-align: middle;
+  color: var(--st-ok); background: var(--st-ok-bg); }
+.surf-when.is-past { color: var(--st-none); background: var(--st-none-bg); }
+.surf-when.is-forecast { color: var(--st-out); background: var(--st-out-bg); }
+.surf-time { display: grid; gap: 0.5rem; margin-top: 1rem; }
+.surf-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.5rem, 1fr)); gap: 0.25rem; }
+.surf-day { min-width: 0; padding: 0.28rem 0.1rem; border-radius: 999px; font: inherit; font-size: 0.62rem; font-weight: 600; white-space: nowrap; cursor: pointer;
+  color: var(--md-default-fg-color); background: var(--card-bg); border: 1.5px solid var(--line); }
+.surf-day.is-past { color: var(--md-default-fg-color--light); border-style: dashed; }
+.surf-day:hover, .surf-day:focus-visible { border-color: var(--md-accent-fg-color); outline: none; }
+.surf-day.is-active { color: #ffffff; background: #0e7490; border-color: #0e7490; border-style: solid; }
+.surf-slider-row { display: flex; align-items: center; gap: 0.5rem; }
+.surf-slider { flex: 1; min-width: 0; height: 1.4rem; accent-color: #0e7490; cursor: pointer; }
+[data-md-color-scheme="slate"] .surf-slider { accent-color: #22d3ee; }
+.rpt-data-btn:disabled { opacity: 0.45; cursor: default; }
+.surf-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.8rem; }
+
+/* ---- lists */
+.surf-link { padding: 0; border: 0; font: inherit; text-align: left; cursor: pointer; color: var(--md-typeset-a-color); background: none; }
+.surf-link:hover, .surf-link:focus-visible { text-decoration: underline; }
+.surf-link.is-on { font-weight: 800; }
+.surf-cell-score { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; }
+.surf-week-wrap { overflow-x: auto; }
+.md-typeset table.surf-week { display: table; width: 100%; margin: 0; border: 0; border-collapse: separate; border-spacing: 0.25rem; font-size: 0.66rem; box-shadow: none; background: none; }
+.md-typeset table.surf-week th { padding: 0.2rem 0.3rem; border: 0; font-weight: 600; text-align: left; white-space: nowrap; background: none; }
+.md-typeset table.surf-week thead th { font-size: 0.58rem; letter-spacing: 0.04em; text-align: center; text-transform: uppercase; color: var(--md-default-fg-color--light); }
+.md-typeset table.surf-week thead th:first-child { text-align: left; }
+.md-typeset table.surf-week td { padding: 0; border: 0; }
+.surf-cell { display: block; width: 100%; min-width: 2.4rem; padding: 0.4rem 0; border: 0; border-radius: 8px; font: inherit; font-size: 0.7rem; font-weight: 800; cursor: pointer;
+  color: var(--b-ink); background: var(--b); }
+.surf-cell:hover, .surf-cell:focus-visible { filter: brightness(1.1); outline: 2px solid var(--md-accent-fg-color); outline-offset: 1px; }
+.surf-cell.is-on { outline: 2px solid var(--md-default-fg-color); outline-offset: 1px; }
+.surf-credit { margin-top: 0.9rem; }

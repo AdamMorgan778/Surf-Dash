@@ -30,6 +30,7 @@ body.rpt-drawer-open { overflow: hidden; }
   background: none; border: 0; border-radius: 999px; color: #e0f7fb; white-space: nowrap; }
 .rpt-tabs button:hover { color: #ffffff; background: rgba(255, 255, 255, 0.14); }
 .rpt-tabs button.is-active { color: #0b3a5b; background: #ffffff; }
+@media (max-width: 760px) { .rpt-tabs { flex-wrap: wrap; border-radius: 1rem; } }
 
 /* canvas grid */
 .rpt-canvas { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1rem; align-items: start; }
