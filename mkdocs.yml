@@ -29,8 +29,7 @@ theme:
 # The sidebar, in a fixed order. The dictionary's table pages are built but not listed: the Data dictionary page
 # lists them instead, so a model with many tables does not swamp the sidebar.
 nav:
-  - Home: index.md
-  - Overview: overview.md
+  - Overview: index.md
   - Work in progress: work.md
   - Documentation:
       - documentation/index.md
@@ -46,6 +45,11 @@ nav:
 
 not_in_nav: |
   /documentation/dictionary/*.md
+  /overview.md
+
+# Adds a version stamp to every script and style address, so browsers fetch them again after a change.
+hooks:
+  - tools/mkdocs_hooks.py
 
 # Shown in every page footer. tools/build.py sets it to when and by which GitHub Actions run the site was built.
 copyright: !ENV [SITE_BUILT, "Built locally"]
@@ -54,7 +58,6 @@ extra_css:
   - assets/site.css
   - assets/report.css
   - assets/jetski.css
-  - assets/barrel.css
 extra_javascript:
   - assets/ui.js
   - assets/home.js
@@ -63,7 +66,6 @@ extra_javascript:
   - assets/housekeeping.js
   - assets/rules.js
   - assets/jetski.js
-  - assets/barrel.js
 
 markdown_extensions:
   - tables
