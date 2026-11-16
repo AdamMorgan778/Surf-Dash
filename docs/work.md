@@ -5,6 +5,6 @@ hide:
 
 # Work in progress
 
-Which tables, columns, measures and report pages someone is already changing, so you can stay clear of them and avoid merge conflicts. It covers branches that are not merged yet, housekeeping fixes someone has picked up, and claims. See [Using this site](guide.md#work-in-progress) for how to claim something.
+What someone is already changing, so you can steer clear and avoid merge conflicts. [How to claim something](guide.md#work-in-progress).
 
-<div id="work-app" data-root="../">Loading…</div>
+<div id="work-app" data-root="../" data-kicker="Who is changing what">Loading…</div>

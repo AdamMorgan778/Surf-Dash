@@ -137,15 +137,18 @@
     var priority = el("select", {}, ["High", "Medium", "Low"].map(function (p) { return el("option", { value: p, text: p, selected: p === "Medium" ? "" : null }); }));
     if (parent) area.value = parent.area && [].some.call(area.options, function (o) { return o.value === parent.area; }) ? parent.area : "";
     var form = el("form", { method: "dialog" }, [
-      el("h2", { id: "req-dialog-title", text: parent ? "Add a sub-requirement" : "Add a requirement" }),
-      parent ? el("p", { class: "req-dialog-note", text: "Part of #" + parent.number + " " + parent.title }) : null,
-      field("Title", title), field("Details", details), field("Acceptance criteria", accept),
-      el("div", { class: "req-field-row" }, [field("Area", area), field("Priority", priority)]),
-      el("div", { class: "req-field-row" }, [field("Assign to", who), field("Due date", due)]), logins,
-      el("p", { class: "req-dialog-note", text: "This opens the Requirement form on GitHub with everything filled in. Press Submit there to save it." }),
-      el("div", { class: "req-dialog-actions" }, [
-        el("button", { type: "button", class: "rpt-data-btn", text: "Cancel", value: "cancel" }),
-        el("button", { type: "submit", class: "hk-primary", text: "Continue on GitHub" })])]);
+      el("div", { class: "req-dialog-head" }, [
+        el("p", { class: "surf-kicker", text: "Planning" }),
+        el("h2", { id: "req-dialog-title", text: parent ? "Add a sub-requirement" : "Add a requirement" }),
+        parent ? el("p", { class: "req-dialog-note", text: "Part of #" + parent.number + " " + parent.title }) : null]),
+      el("div", { class: "req-dialog-body" }, [
+        field("Title", title), field("Details", details), field("Acceptance criteria", accept),
+        el("div", { class: "req-field-row" }, [field("Area", area), field("Priority", priority)]),
+        el("div", { class: "req-field-row" }, [field("Assign to", who), field("Due date", due)]), logins,
+        el("p", { class: "req-dialog-note", text: "Opens the Requirement form on GitHub, filled in. Press Submit there to save it." }),
+        el("div", { class: "req-dialog-actions" }, [
+          el("button", { type: "button", class: "rpt-data-btn", text: "Cancel", value: "cancel" }),
+          el("button", { type: "submit", class: "hk-primary", text: "Continue on GitHub →" })])])]);
     form.querySelector("button[value=cancel]").addEventListener("click", function () { dlg.close(); });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -162,23 +165,23 @@
     title.focus();
   }
 
-  // ---- shell: filters, Add button, tabs
+  // ---- shell: tabs, filters and the Add button, in the page banner (or above the page if there is no banner)
   function buildShell() {
     clear(app);
+    var bar = M.heroControls() || app.appendChild(el("div", { class: "surf-hero-controls" }));
     var selects = el("div", { class: "rpt-slicers", role: "group", "aria-label": "Filters" });
     ui.selects = {};
     [["person", "Person", plan.logins.filter(function (n) { return plan.requirements.some(function (r) { return r.assignees.indexOf(n) !== -1; }); }).concat(["Unassigned"]),
       function (v) { return v === "Unassigned" ? v : "@" + v; }],
      ["status", "Status", Object.keys(STATUS), function (v) { return STATUS[v].label; }]].forEach(function (d) {
-      var sel = el("select", { id: "pf-" + d[0] }, [el("option", { value: "", text: "All" })]);
+      var sel = el("select", { id: "pf-" + d[0], "aria-label": d[1] }, [el("option", { value: "", text: d[1] + ": All" })]);
       d[2].forEach(function (v) { sel.appendChild(el("option", { value: v, text: d[3](v) })); });
       sel.addEventListener("change", function () { if (sel.value) state[d[0]] = sel.value; else delete state[d[0]]; commit(false); });
       ui.selects[d[0]] = sel;
-      selects.appendChild(el("label", {}, [d[1], sel]));
+      selects.appendChild(sel);
     });
     var add = el("button", { type: "button", class: "hk-primary req-add", disabled: plan.repo ? null : "" }, [el("span", { "aria-hidden": "true", text: "+ " }), "Add requirement"]);
     add.addEventListener("click", function () { openDialog(null); });
-    app.appendChild(el("div", { class: "rpt-header req-header" }, [el("div", { class: "rpt-header-row" }, [selects, add])]));
     ui.tabs = {};
     var tabs = el("div", { class: "rpt-tabs", role: "tablist", "aria-label": "Planning pages" });
     VIEWS.forEach(function (v) {
@@ -186,7 +189,7 @@
       b.addEventListener("click", function () { if (view !== v.id) { view = v.id; commit(true); } });
       ui.tabs[v.id] = b; tabs.appendChild(b);
     });
-    app.appendChild(tabs);
+    bar.appendChild(tabs); bar.appendChild(selects); bar.appendChild(add);
     ui.canvas = el("div", { class: "rpt-canvas", role: "tabpanel" });
     app.appendChild(ui.canvas);
     window.addEventListener("popstate", function () { readState(); render(); });
@@ -195,7 +198,7 @@
   // ---- Dashboard
   function pageDashboard() {
     var list = scoped(), t = tally(list, today);
-    var hero = M.visual(ui.canvas, "Progress", { span: 12, sub: "Share of the work that is complete. A requirement that has been broken down is counted through its sub-requirements." });
+    var hero = M.visual(ui.canvas, "Progress", { span: 12 });
     hero.appendChild(el("div", { class: "req-progress" }, [
       el("div", { class: "req-progress-value", text: t.pct + "%" }),
       el("div", { class: "req-progress-side" }, [
@@ -203,11 +206,11 @@
         el("div", { class: "req-progress-text", text: t.pieces ? t.complete + " of " + plural(t.pieces, "piece") + " of work complete" : "No requirements match yet. Add the first one with Add requirement." })])]));
     function go(status) { return function () { if (status) state.status = status; else delete state.status; view = "requirements"; commit(true); }; }
     ui.canvas.appendChild(el("div", { class: "rpt-kpis span-12 req-kpis" }, [
-      { label: "Still to do", value: t.open, sub: "open requirements", onClick: go(""), tip: "List the requirements" },
-      { label: "Overdue", value: t.overdue, sub: t.overdue ? "past their due date" : "nothing is late" },
-      { label: "Due in " + SOON + " days", value: t.soon, sub: "coming up" },
-      { label: "Reopened", value: t.reopened, sub: "not satisfied first time", onClick: go("reopened"), tip: "List reopened requirements" },
-      { label: "Needs a date", value: t.needsDate, sub: "open with no due date" }
+      { label: "Still to do", value: t.open, sub: "open requirements", tone: "ocean", onClick: go(""), tip: "List the requirements" },
+      { label: "Overdue", value: t.overdue, sub: t.overdue ? "past their due date" : "nothing is late", tone: "coral" },
+      { label: "Due in " + SOON + " days", value: t.soon, sub: "coming up", tone: "amber" },
+      { label: "Reopened", value: t.reopened, sub: "not satisfied first time", tone: "orange", onClick: go("reopened"), tip: "List reopened requirements" },
+      { label: "Needs a date", value: t.needsDate, sub: "open with no due date", tone: "slate" }
     ].map(M.tile)));
 
     var per = {};
@@ -218,7 +221,7 @@
         p.total++; if (r.status === "complete") p.complete++;
       });
     });
-    M.bars(M.visual(ui.canvas, "Completion by person", { span: 6, sub: "Complete out of everything assigned to them. Click a person to filter." }),
+    M.bars(M.visual(ui.canvas, "Completion by person", { span: 6, cls: "dot-teal", sub: "Click a person to filter." }),
       Object.keys(per).sort(function (a, b) { return (a === "Unassigned") - (b === "Unassigned") || a.localeCompare(b); }).map(function (w) {
         var p = per[w], rate = Math.round(100 * p.complete / p.total);
         return { label: w === "Unassigned" ? w : "@" + w, value: rate, display: p.complete + "/" + p.total, tip: (w === "Unassigned" ? w : "@" + w) + ": " + p.complete + " of " + p.total + " complete",
@@ -228,10 +231,10 @@
 
     var months = {};
     list.forEach(function (r) { if (r.leaf && r.due && r.status !== "complete" && r.status !== "dropped") { var k = r.due.slice(0, 7); months[k] = (months[k] || 0) + 1; } });
-    M.bars(M.visual(ui.canvas, "Still to do, by month due", { span: 6, sub: "Open requirements by the month they are due. Click a month to see it on the calendar." }),
+    M.bars(M.visual(ui.canvas, "Still to do, by month due", { span: 6, cls: "dot-coral", sub: "Click a month to see it on the calendar." }),
       Object.keys(months).sort().slice(0, 12).map(function (k) {
         var label = MONTHS[+k.slice(5) - 1].slice(0, 3) + " " + k.slice(0, 4), late = k < today.slice(0, 7);
-        return { label: label, value: months[k], cls: late ? "sev-error" : "", tip: label + ": " + plural(months[k], "requirement") + " due" + (late ? ", overdue" : ""),
+        return { label: label, value: months[k], cls: late ? "sev-error" : "fill-coral", tip: label + ": " + plural(months[k], "requirement") + " due" + (late ? ", overdue" : ""),
                  onClick: function () { month = { y: +k.slice(0, 4), m: +k.slice(5) - 1 }; view = "calendar"; commit(true); } };
       }), { empty: "No open requirement has a due date." });
   }
@@ -265,8 +268,7 @@
   function pageRequirements() {
     // top-level requirements; one is shown if it, or anything under it, matches the filters
     var tops = plan.requirements.filter(function (r) { return !r.parent && family(r).some(matches); });
-    var host = M.visual(ui.canvas, "Requirements (" + tops.length + ")", { span: 12,
-      sub: "Click ▸ for the acceptance criteria and sub-requirements. To take one out, open it on GitHub and use Create a branch; merging that branch completes it." });
+    var host = M.visual(ui.canvas, "Requirements (" + tops.length + ")", { span: 12, sub: "Click ▸ for the acceptance criteria and sub-requirements." });
     function draw() {
       M.sortable(host, sort, [
         { key: "", label: "", cls: "expand-col", cell: function (x) {
@@ -275,16 +277,19 @@
                                    "aria-label": (open ? "Hide" : "Show") + " details for #" + r.number, text: open ? "▾" : "▸" });
             b.addEventListener("click", function () { expanded[r.number] = !open; draw(); });
             return b; } },
-        { key: "number", label: "#", num: true, cell: function (x) { return el("a", { href: x.r.url, text: "#" + x.r.number }); } },
-        { key: "title", label: "Requirement", cell: function (x) { return el("strong", { text: x.r.title }); } },
+        { key: "number", label: "Requirement", cell: function (x) { return el("a", { class: "req-title", href: x.r.url, text: "#" + x.r.number + " " + x.r.title }); } },
         { key: "who", label: "Assigned to", cell: function (x) { return people(x.r); } },
         { key: "due", label: "Due", cell: function (x) {
             var r = x.r, text = dueText(r, today);
             return r.due ? el("span", { title: text }, [fmtDate(r.due), text && dueState(r, today).state !== "later" ? el("span", { class: "req-meta", text: " " + text }) : null])
                          : el("span", { class: "req-meta", text: r.dueText ? "Unreadable date: " + r.dueText : "No date" }); } },
         { key: "order", label: "Status", cell: function (x) { return chip(x.r, today); } },
-        { key: "done", label: "Parts done", num: true, cell: function (x) { return x.r.children.length ? x.r.progress.done + " of " + x.r.progress.total : ""; } },
-        { key: "taken", label: "Taken out", cell: function (x) { return takenText(x.r); } }
+        { key: "done", label: "Parts", cell: function (x) {
+            var p = x.r.progress;
+            if (!x.r.children.length) return "";
+            return el("span", { class: "req-parts", title: p.done + " of " + p.total + " sub-requirements done" }, [
+              el("span", { class: "bar-track" }, [el("span", { class: "bar-fill", style: "display:block;width:" + (100 * p.done / (p.total || 1)) + "%" })]),
+              el("span", { class: "req-meta", text: p.done + "/" + p.total })]); } }
       ], tops.map(function (r) {
         return { r: r, _tie: pad(r.number), number: r.number, title: r.title, who: people(r), due: r.due || "9999", order: ORDER[r.status],
                  done: r.children.length ? r.progress.done / (r.progress.total || 1) : -1, taken: r.takenOut ? (r.takenOut.on || "0") : "" };
@@ -296,6 +301,7 @@
           return el("tr", { class: "detail-row" }, [el("td", {}), el("td", { colspan: String(span - 1) }, [
             el("div", { class: "req-detail" }, [block("Details", r.details), block("Acceptance criteria", r.acceptance),
               block("About", [r.area ? "Area: " + r.area : "", r.priority ? "Priority: " + r.priority : "", "Raised " + fmtDate(r.created) + (r.author ? " by @" + r.author : ""),
+                              r.takenOut ? "Taken out by " + takenText(r) : "",
                               r.closed && r.status === "complete" ? "Completed " + fmtDate(r.closed) : ""].filter(Boolean).join(" · "))]),
             r.children.length ? el("div", { class: "req-block-label", text: "Sub-requirements: " + r.progress.done + " of " + r.progress.total + " done" }) : null,
             r.children.length ? subList(r) : null, actions(r)])]);
@@ -314,9 +320,9 @@
     var host = M.visual(ui.canvas, "", { span: 12 }), head = host.parentNode.querySelector("h3");
     function move(n) { return function () { var d = new Date(Date.UTC(month.y, month.m + n, 1)); month = { y: d.getUTCFullYear(), m: d.getUTCMonth() }; draw(); }; }
     var nav = el("div", { class: "cal-nav" }, [
-      el("button", { type: "button", class: "rpt-data-btn", "aria-label": "Previous month", text: "‹ Previous", onclick: move(-1) }),
+      el("button", { type: "button", class: "rpt-data-btn", "aria-label": "Previous month", text: "‹", onclick: move(-1) }),
       el("button", { type: "button", class: "rpt-data-btn", text: "Today", onclick: function () { month = { y: +today.slice(0, 4), m: +today.slice(5, 7) - 1 }; draw(); } }),
-      el("button", { type: "button", class: "rpt-data-btn", "aria-label": "Next month", text: "Next ›", onclick: move(1) })]);
+      el("button", { type: "button", class: "rpt-data-btn", "aria-label": "Next month", text: "›", onclick: move(1) })]);
     var grid = el("div");
     host.appendChild(nav); host.appendChild(grid);
     var byDate = {};
@@ -330,7 +336,7 @@
         body.appendChild(el("tr", {}, week.map(function (c) {
           var items = (byDate[c.date] || []).sort(function (a, b) { return ORDER[a.status] - ORDER[b.status] || a.number - b.number; });
           return el("td", { class: (c.inMonth ? "" : "cal-out ") + (c.date === today ? "cal-today" : "") }, [
-            el("div", { class: "cal-day", text: String(c.day) + (c.date === today ? " · today" : "") })].concat(items.map(function (r) {
+            el("div", { class: "cal-day", text: String(c.day) + (c.date === today ? " · Today" : "") })].concat(items.map(function (r) {
               return el("a", { class: "cal-chip is-" + r.status + (dueState(r, today).state === "overdue" ? " is-overdue" : ""), href: r.url,
                                title: "#" + r.number + " " + r.title + " · " + people(r) + " · " + STATUS[r.status].label + (dueText(r, today) ? ", " + dueText(r, today) : "") },
                 [el("span", { "aria-hidden": "true", text: STATUS[r.status].icon + " " }), "#" + r.number + " " + r.title]);
@@ -340,7 +346,10 @@
       table.appendChild(body);
       grid.appendChild(el("div", { class: "cal-wrap" }, [table]));
       var count = list.filter(function (r) { return r.due.slice(0, 7) === month.y + "-" + pad(month.m + 1); }).length;
-      grid.appendChild(el("p", { class: "rpt-hint", text: plural(count, "requirement") + " due this month. Requirements with no due date are not shown." }));
+      grid.appendChild(el("div", { class: "cal-key" }, ["complete", "taken-out", "reopened", "not-started"].map(function (s) {
+        return el("span", { class: "req-status is-" + s, text: STATUS[s].label });
+      }).concat([el("span", { class: "req-status is-overdue", text: "Overdue" }),
+                 el("span", { class: "rpt-hint", text: plural(count, "requirement") + " due this month. Requirements with no due date are not shown." })])));
     }
     draw();
   }

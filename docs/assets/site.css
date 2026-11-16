@@ -1,75 +1,53 @@
-/* Shared by every page: colour tokens, tiles, bars, the dictionary filter and the tinted sidebar.
-   Colours for text and surfaces come from the Material theme so light and dark both work. */
+/* Shared by every page: colour tokens, the page banner, tiles, bars, the sidebar and tables in the text.
+   The look is ocean and surf: a navy top bar, an ocean banner with waves on every page, and white cards that float
+   over the wave line. Tokens are set on body, where Material reads its colours; light and dark both work. */
 :root {
-  --dash-bar: #1f7a8c;
   --sev-error: #d03b3b;
   --sev-warning: #fab219;
   --sev-info: #7d8a94;
 }
 
-.doc-filter {
-  font: inherit; font-size: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 6px; min-width: 9rem;
-  color: var(--md-default-fg-color); background: var(--md-default-bg-color);
-  border: 1px solid var(--md-default-fg-color--lighter);
-}
-.doc-filter { width: 100%; max-width: 26rem; margin-bottom: 0.5rem; }
-.dash-note { font-size: 0.65rem; color: var(--md-default-fg-color--light); margin: 0.2rem 0 0.8rem; }
-.dash-empty { font-size: 0.7rem; color: var(--md-default-fg-color--light); }
-
-.dash-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.9rem; }
-.dash-tile { border-radius: 14px; padding: 0.85rem 1rem; background: var(--md-default-bg-color); box-shadow: var(--card-shadow); }
-.tile-label { font-size: 0.65rem; color: var(--md-default-fg-color--light); }
-.tile-value { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; color: var(--md-default-fg-color); }
-.tile-sub { font-size: 0.62rem; color: var(--md-default-fg-color--light); }
-
-.bar-row { display: grid; grid-template-columns: 6.5rem 1fr auto; align-items: center; gap: 0.5rem; font-size: 0.68rem; padding: 0.18rem 0; }
-.bar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-track { height: 0.6rem; }
-.bar-fill { height: 100%; min-width: 2px; border-radius: 0 6px 6px 0; background: var(--dash-bar); }
-.bar-value { min-width: 1.5rem; text-align: right; font-variant-numeric: tabular-nums; color: var(--md-default-fg-color); }
-.bar-row:hover .bar-fill { filter: brightness(1.15); }
-
-.bar-fill.sev-error { background: var(--sev-error); }
-.bar-fill.sev-warning { background: var(--sev-warning); }
-.bar-fill.sev-info { background: var(--sev-info); }
-.bar-icon { display: inline-block; width: 1rem; font-size: 0.7rem; }
-.bar-icon.sev-error { color: var(--sev-error); }
-.bar-icon.sev-warning { color: var(--sev-warning); }
-.bar-icon.sev-info { color: var(--sev-info); }
-.sev-chip { white-space: nowrap; }
-
-/* ---- Clean coastal look: deep ocean navy, sea-glass teal, sand. Set on body, where Material reads its colours. */
-body {
-  --ocean: #0b3954; --ocean-deep: #082c41; --seaglass: #087e8b; --foam: #3fb8af; --sand: #f2c57c;
-  --card-shadow: 0 1px 2px rgba(11, 57, 84, 0.06), 0 6px 18px rgba(11, 57, 84, 0.07);
-  --md-primary-fg-color: var(--ocean); --md-primary-fg-color--light: #14506f; --md-primary-fg-color--dark: var(--ocean-deep);
+/* The scheme is named in the selector so these win over the theme's own scheme colours. */
+body, body[data-md-color-scheme="default"] {
+  --ocean: #0b3a5b; --ocean-deep: #082f49; --seaglass: #0e7490; --aqua: #22d3ee; --foam: #a5f3fc; --coral: #f97362; --sand: #fbbf24;
+  --page-bg: #f3fafc; --card-bg: #ffffff; --line: #e3eef3;
+  --card-shadow: 0 4px 16px rgba(8, 47, 73, 0.08);
+  --lift-shadow: 0 10px 30px rgba(8, 47, 73, 0.16);
+  /* tile and status colours: ocean, teal, orange, coral, amber, slate */
+  --tone-ocean: #0e7490; --tone-teal: #0d9488; --tone-orange: #ea580c; --tone-coral: #e0533f; --tone-amber: #b45309; --tone-slate: #4b6b80;
+  --st-ok: #115e59; --st-ok-bg: #ccfbf1; --st-out: #0e7490; --st-out-bg: #cffafe; --st-late: #b42318; --st-late-bg: #ffe4de;
+  --st-re: #9a3412; --st-re-bg: #ffedd5; --st-soon: #92400e; --st-soon-bg: #fef3c7; --st-none: #4b6b80; --st-none-bg: #e8eef2;
+  --dash-bar: #0e7490; --dash-bar-from: #67e8f9;
+  --md-primary-fg-color: var(--ocean-deep); --md-primary-fg-color--light: var(--ocean); --md-primary-fg-color--dark: #061f33;
   --md-primary-bg-color: #ffffff; --md-primary-bg-color--light: rgba(255, 255, 255, 0.75);
-  --md-accent-fg-color: var(--seaglass); --md-accent-fg-color--transparent: rgba(8, 126, 139, 0.1);
+  --md-accent-fg-color: var(--seaglass); --md-accent-fg-color--transparent: rgba(14, 116, 144, 0.1);
   --md-typeset-a-color: var(--seaglass);
-  --md-footer-bg-color: var(--ocean); --md-footer-bg-color--dark: var(--ocean-deep);
-  --dash-bar: #1f8a99;
+  --md-code-bg-color: #eaf6f9;
+  --md-footer-bg-color: var(--ocean-deep); --md-footer-bg-color--dark: #061f33;
 }
 body[data-md-color-scheme="slate"] {
   --md-hue: 203;
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.25);
-  --md-primary-fg-color: var(--ocean-deep); --md-primary-fg-color--light: var(--ocean); --md-primary-fg-color--dark: #061f2e;
-  --md-accent-fg-color: var(--foam); --md-accent-fg-color--transparent: rgba(63, 184, 175, 0.12);
-  --md-typeset-a-color: #62cfc6;
-  --md-footer-bg-color: var(--ocean-deep); --md-footer-bg-color--dark: #061f2e;
-  --dash-bar: #4fb3c4;
+  --page-bg: hsl(203, 30%, 9%); --card-bg: hsl(203, 24%, 15%); --line: rgba(255, 255, 255, 0.09);
+  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --lift-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --tone-ocean: #67e8f9; --tone-teal: #5eead4; --tone-orange: #fdba74; --tone-coral: #ff9d8f; --tone-amber: #fcd34d; --tone-slate: #a9bcc8;
+  --st-ok: #5eead4; --st-ok-bg: rgba(94, 234, 212, 0.15); --st-out: #67e8f9; --st-out-bg: rgba(103, 232, 249, 0.15);
+  --st-late: #ffb4a8; --st-late-bg: rgba(249, 115, 98, 0.2); --st-re: #fdba74; --st-re-bg: rgba(253, 186, 116, 0.15);
+  --st-soon: #fcd34d; --st-soon-bg: rgba(252, 211, 77, 0.15); --st-none: #a9bcc8; --st-none-bg: rgba(169, 188, 200, 0.15);
+  --dash-bar: #22d3ee; --dash-bar-from: #0e7490;
+  --md-default-bg-color: var(--page-bg);
+  --md-primary-fg-color: #061f33; --md-primary-fg-color--light: var(--ocean); --md-primary-fg-color--dark: #041725;
+  --md-accent-fg-color: #5eead4; --md-accent-fg-color--transparent: rgba(94, 234, 212, 0.12);
+  --md-typeset-a-color: #67e8f9;
+  --md-code-bg-color: rgba(255, 255, 255, 0.06);
+  --md-footer-bg-color: #061f33; --md-footer-bg-color--dark: #041725;
 }
 
-/* a line of small waves under the header and along the top of the footer */
+/* ---- Page frame */
+.md-container, .md-main { background: var(--page-bg); }
 .md-header { box-shadow: none; }
-.md-header::after, .md-footer::before { content: ""; display: block; height: 9px; background-repeat: repeat-x; background-size: 54px 9px; pointer-events: none; }
-.md-header::after { position: absolute; left: 0; right: 0; top: 100%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 0h54v3c-9 0-9 6-18 6s-9-6-18-6S9 9 0 9z' fill='%230b3954'/%3E%3C/svg%3E"); }
-.md-footer { position: relative; }
-.md-footer::before { margin-top: -8px; transform: translateY(-1px);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 9h54V6c-9 0-9-6-18-6S27 6 18 6 9 0 0 0z' fill='%230b3954'/%3E%3C/svg%3E"); }
-[data-md-color-scheme="slate"] .md-header::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 0h54v3c-9 0-9 6-18 6s-9-6-18-6S9 9 0 9z' fill='%23082c41'/%3E%3C/svg%3E"); }
-[data-md-color-scheme="slate"] .md-footer::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 9' preserveAspectRatio='none'%3E%3Cpath d='M0 9h54V6c-9 0-9-6-18-6S27 6 18 6 9 0 0 0z' fill='%23082c41'/%3E%3C/svg%3E"); }
-.md-main__inner { margin-top: 2rem; }
+.md-main__inner { margin-top: 1.2rem; }
+.md-search__form { border-radius: 999px; }
 
 /* The sidebar sits at the left edge of the window on every page and at every width, so it never shifts between
    pages or floats part-way across a wide screen. The content takes the rest: it has a maximum width and is centred
@@ -83,37 +61,129 @@ body[data-md-color-scheme="slate"] {
   .md-sidebar--secondary:not([hidden]) { margin-right: auto; }
 }
 
-/* type: tighter, heavier headings in ocean navy */
-.md-typeset h1 { font-weight: 700; letter-spacing: -0.02em; color: var(--ocean); margin-bottom: 0.6em; }
-.md-typeset h2 { font-weight: 700; letter-spacing: -0.01em; }
+/* type: tighter, heavier headings */
+.md-typeset h1 { font-weight: 800; letter-spacing: -0.02em; color: var(--ocean); margin-bottom: 0.6em; }
+.md-typeset h2 { font-weight: 700; letter-spacing: -0.01em; color: var(--ocean); }
 .md-typeset h3 { font-weight: 700; }
-[data-md-color-scheme="slate"] .md-typeset h1 { color: #d9eef2; }
+[data-md-color-scheme="slate"] .md-typeset h1, [data-md-color-scheme="slate"] .md-typeset h2 { color: #d9eef2; }
 
-/* ---- Sidebar: plain, with the current page marked by a sea-glass bar */
+/* ---- Sidebar: plain, with the current page as a teal pill */
 @media screen and (min-width: 76.25em) {
   .md-sidebar--primary .md-nav__title { background: transparent; box-shadow: none;
     font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--md-default-fg-color--light); }
-  .md-sidebar--primary a.md-nav__link, .md-sidebar--primary label.md-nav__link { border-radius: 0 8px 8px 0; padding: 0.32rem 0.6rem; margin-top: 0.1rem;
-    border-left: 3px solid transparent; transition: background 0.15s, border-color 0.15s; }
+  .md-sidebar--primary a.md-nav__link, .md-sidebar--primary label.md-nav__link { border-radius: 8px; padding: 0.34rem 0.6rem; margin-top: 0.1rem;
+    transition: background 0.15s, color 0.15s; }
   .md-sidebar--primary a.md-nav__link:hover { background: var(--md-accent-fg-color--transparent); }
-  .md-sidebar--primary a.md-nav__link--active { border-left-color: var(--md-accent-fg-color); background: var(--md-accent-fg-color--transparent);
-    color: var(--md-accent-fg-color); font-weight: 700; }
+  .md-sidebar--primary a.md-nav__link--active, .md-sidebar--primary a.md-nav__link--active:hover {
+    background: linear-gradient(90deg, #0e7490, #0891b2); color: #ffffff; font-weight: 700; }
 }
 
-/* tables in the text: lighter lines, no heavy frame */
-.md-typeset table:not([class]) { border: 0; border-radius: 12px; box-shadow: var(--card-shadow); font-size: 0.7rem; }
-.md-typeset table:not([class]) th { font-weight: 700; color: var(--md-default-fg-color--light); }
-.md-typeset table:not([class]) td { border-top-color: var(--md-default-fg-color--lightest); }
+.md-sidebar--secondary .md-nav__title { background: transparent; box-shadow: none; }
 
-/* home page: the same visuals as the report, one column */
-.home-canvas { margin-top: 0.8rem; }
+/* ---- Banner (built by ui.js from the page's title and first paragraph) */
+/* Nothing around the title is positioned: the theme measures the title's place on the page to decide when the
+   top bar should show it, so the waves are a block at the bottom of the banner and the sun hangs from .surf-sky. */
+.surf-hero { overflow: hidden; border-radius: 1rem 1rem 0 0; padding: 1.6rem 2rem 0; color: #ffffff;
+  background: linear-gradient(160deg, #0b3a5b 0%, #0e7490 55%, #22d3ee 100%); }
+.surf-hero-text { max-width: 46rem; }
+.surf-sky { position: relative; height: 0; }
+.md-typeset .surf-kicker { margin: 0; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #a5f3fc; }
+.md-typeset .surf-hero h1 { margin: 0.4rem 0 0.3rem; font-size: 2.1rem; line-height: 1.1; color: #ffffff; }
+.md-typeset .surf-lead { margin: 0; font-size: 0.85rem; color: #e0f7fb; }
+.md-typeset .surf-hero a { color: #ffffff; text-decoration: underline; text-underline-offset: 2px; }
+.md-typeset .surf-hero .doc-crumb { margin: 0.7rem 0 0.5rem; font-size: 0.65rem; color: #e0f7fb; }
+.surf-sun { position: absolute; right: 1.2rem; top: -0.1rem; width: 4.2rem; height: 4.2rem; border-radius: 50%;
+  background: radial-gradient(circle, #fde68a 0%, #fbbf24 60%, rgba(251, 191, 36, 0) 72%); }
+.md-typeset .surf-waves { display: block; width: calc(100% + 4rem); max-width: none; height: 6rem; margin: -0.4rem -2rem -1px; pointer-events: none; }
+.surf-shore { fill: var(--page-bg); }
+
+/* tabs, filters and buttons a page adds to its banner */
+.surf-hero-controls { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1.1rem; }
+.surf-hero-controls:empty { display: none; }
+.surf-hero select { font: inherit; font-size: 0.65rem; padding: 0.42rem 0.7rem; border-radius: 999px; min-width: 0; cursor: pointer;
+  color: #ffffff; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.35); }
+.surf-hero select option, .surf-hero select optgroup { color: #0f2a3d; background: #ffffff; }
+.surf-hero select:focus-visible, .surf-hero button:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+
+/* content floats over the wave line; text pages sit on one sheet */
+.surf-hero ~ * { margin-left: 1.2rem; margin-right: 1.2rem; }
+.surf-hero + * { position: relative; margin-top: -4.6rem; }
+.surf-sheet { padding: 1.3rem 1.4rem; border-radius: 16px; background: var(--card-bg); box-shadow: var(--lift-shadow); }
+.surf-sheet > :first-child { margin-top: 0; }
+.surf-sheet > :last-child { margin-bottom: 0; }
+@media (max-width: 760px) {
+  .surf-hero { padding: 1.2rem 1rem 0; }
+  .md-typeset .surf-hero h1 { font-size: 1.6rem; }
+  .surf-sun { right: 0; top: 0; width: 2.8rem; height: 2.8rem; }
+  .md-typeset .surf-waves { width: calc(100% + 2rem); height: 4.5rem; margin: -0.3rem -1rem -1px; }
+  .surf-hero ~ * { margin-left: 0.5rem; margin-right: 0.5rem; }
+  .surf-hero + * { margin-top: -3.4rem; }
+  .surf-sheet { padding: 1rem; }
+}
+
+/* ---- Tiles: one colour each, by position unless the tile names a tone */
+.doc-filter {
+  font: inherit; font-size: 0.75rem; padding: 0.4rem 0.8rem; border-radius: 999px; min-width: 9rem;
+  color: var(--md-default-fg-color); background: var(--card-bg);
+  border: 1.5px solid var(--line);
+}
+.doc-filter { width: 100%; max-width: 26rem; margin-bottom: 0.5rem; }
+.dash-note { font-size: 0.65rem; color: var(--md-default-fg-color--light); margin: 0.2rem 0 0.8rem; }
+.dash-empty { font-size: 0.7rem; color: var(--md-default-fg-color--light); }
+
+.dash-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.9rem; }
+.dash-tile { --c: var(--tone-ocean); border-radius: 14px; padding: 0.8rem 0.95rem; background: var(--card-bg); box-shadow: var(--lift-shadow);
+  border-top: 4px solid var(--c); }
+.dash-tile:nth-child(6n+2) { --c: var(--tone-teal); }
+.dash-tile:nth-child(6n+3) { --c: var(--tone-orange); }
+.dash-tile:nth-child(6n+4) { --c: var(--tone-coral); }
+.dash-tile:nth-child(6n+5) { --c: var(--tone-amber); }
+.dash-tile:nth-child(6n) { --c: var(--tone-slate); }
+.dash-tile.tone-ocean { --c: var(--tone-ocean); } .dash-tile.tone-teal { --c: var(--tone-teal); } .dash-tile.tone-orange { --c: var(--tone-orange); }
+.dash-tile.tone-coral { --c: var(--tone-coral); } .dash-tile.tone-amber { --c: var(--tone-amber); } .dash-tile.tone-slate { --c: var(--tone-slate); }
+.dash-tile:has(.bar-icon.sev-error) { --c: var(--tone-coral); }
+.dash-tile:has(.bar-icon.sev-warning) { --c: var(--tone-amber); }
+.dash-tile:has(.bar-icon.sev-info) { --c: var(--tone-slate); }
+.tile-label { font-size: 0.65rem; font-weight: 600; color: var(--md-default-fg-color--light); }
+.tile-value { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.3; color: var(--c); }
+.tile-sub { font-size: 0.62rem; color: var(--md-default-fg-color--light); }
+
+/* ---- Bars */
+.bar-row { display: grid; grid-template-columns: 6.5rem 1fr auto; align-items: center; gap: 0.5rem; font-size: 0.68rem; padding: 0.2rem 0; }
+.bar-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { height: 0.5rem; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar-fill { height: 100%; min-width: 2px; border-radius: 999px; background: linear-gradient(90deg, var(--dash-bar-from), var(--dash-bar)); }
+.bar-fill.fill-coral { background: linear-gradient(90deg, #fdba74, #f97362); }
+.bar-value { min-width: 1.5rem; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--md-default-fg-color--light); }
+.bar-row:hover .bar-fill { filter: brightness(1.1); }
+
+.bar-fill.sev-error { background: var(--sev-error); }
+.bar-fill.sev-warning { background: var(--sev-warning); }
+.bar-fill.sev-info { background: var(--sev-info); }
+.bar-icon { display: inline-block; width: 1rem; font-size: 0.7rem; }
+.bar-label .hk-tag-dot { margin-right: 0.4rem; }
+.bar-icon.sev-error { color: var(--sev-error); }
+.bar-icon.sev-warning { color: var(--sev-warning); }
+.bar-icon.sev-info { color: var(--sev-info); }
+.sev-chip { white-space: nowrap; }
+
+/* ---- Tables in the text: light lines, a pale header */
+.md-typeset table:not([class]) { border: 1px solid var(--line); border-radius: 12px; box-shadow: none; font-size: 0.7rem; background: var(--card-bg); }
+.md-typeset table:not([class]) th { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--md-default-fg-color--light); background: var(--md-code-bg-color); }
+.md-typeset table:not([class]) td { border-top-color: var(--line); }
+.md-typeset code { border-radius: 5px; }
+
+/* home page: the same visuals as the report */
+.home-canvas { margin-top: 1.1rem; }
 
 /* Generated tables that scroll in place, with the header kept in view (Data dictionary) */
-.doc-scroll .md-typeset__scrollwrap { max-height: 22rem; overflow: auto; margin: 0 0 1rem; border-radius: 12px; box-shadow: var(--card-shadow); }
+.doc-scroll .md-typeset__scrollwrap { max-height: 22rem; overflow: auto; margin: 0 0 1rem; border-radius: 12px; border: 1px solid var(--line); }
 .doc-scroll.doc-scroll-tall .md-typeset__scrollwrap { max-height: 34rem; }
 .doc-scroll .md-typeset__table { margin: 0; }
 .md-typeset .doc-scroll table:not([class]) { border: 0; box-shadow: none; }
-.md-typeset .doc-scroll table:not([class]) thead th { position: sticky; top: 0; z-index: 1; background: var(--md-default-bg-color); }
+.md-typeset .doc-scroll table:not([class]) thead th { position: sticky; top: 0; z-index: 1; background: var(--card-bg);
+  box-shadow: inset 0 -1.5px 0 var(--line); }
 
 /* Footer: when the site was built */
 .md-copyright time { font-variant-numeric: tabular-nums; }

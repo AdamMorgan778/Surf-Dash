@@ -5,6 +5,6 @@ hide:
 
 # Best practice
 
-How the model measures up against modelling conventions and best practice. Filters apply to every tab. See the [rule library](reference.md) for what each rule checks, and [Using this site](../guide.md) for how to raise clean-up work.
+How the model measures up against best practice. Click any bar or tile to filter every tab. See the [rule library](reference.md) for what each rule checks.
 
 <div id="rules-app" data-root="../">Loading the rule results…</div>
